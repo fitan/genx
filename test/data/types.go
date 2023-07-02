@@ -7,13 +7,19 @@ type CheckIpInItem struct {
 	UUID string
 }
 
+// @gormM(types.User)
+// @gormP(Friends)
 type ListRequest struct {
 	// Page 页码
+	// @gormPage
 	Page int `param:"query,page" json:"page"`
 	// PageSize 每页数量
+	// @gormPageSize
 	PageSize int `param:"query,pageSize" json:"pageSize"`
 	// Order 排序
+	// @gormq(Username)
 	Order string `param:"query,order" json:"order"`
+	// @gormq(Keyword, like)
 	// Keyword 关键字
 	Keyword string `param:"query,keyword" json:"keyword"`
 	// 品牌
@@ -21,12 +27,9 @@ type ListRequest struct {
 	// 产品型号
 	BrandUuid string `param:"query,brandUuid" json:"brandUuid"`
 
-	// Namespaces 项目空间
-	// @kit-http-param ctx dnsmiddleware.ContextKeyNamespace
-	//Namespaces []string `param:"ctx,namespaces" json:"namespaces"`
-	// Names 服务空间
-	// @kit-http-param ctx dnsmiddleware.ContextKeyService
-	//Names []string `param:"ctx,names" json:"names"`
+	// 朋友名字
+	// @gormq(Friends.Name, "like")
+	FriendName string `param:"query,friendName" json:"friendName"`
 
 	// ComputerRoomUUID 机房UUID
 	ComputerRoomUUID string `param:"query,computerRoomUuid" json:"computerRoomUuid"`

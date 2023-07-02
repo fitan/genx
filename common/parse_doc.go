@@ -1,13 +1,14 @@
 package common
 
 import (
-	"github.com/alecthomas/participle/v2"
-	"github.com/alecthomas/participle/v2/lexer"
 	"go/ast"
 	"go/token"
+	"strings"
+
+	"github.com/alecthomas/participle/v2"
+	"github.com/alecthomas/participle/v2/lexer"
 	"golang.org/x/exp/slog"
 	"golang.org/x/tools/go/packages"
-	"strings"
 )
 
 var (
@@ -38,13 +39,29 @@ type F struct {
 	Args     []string `( "(" (@String | @Ident) ("," (@String | @Ident))* ")" )?`
 }
 
-func (d *Doc) ByFuncName(f F) *Func {
+func (d *Doc) ByFuncName(name string) *F {
 	for _, v := range d.Funcs {
-		if v.Func != nil && strings.EqualFold(v.Func.FuncName, f.FuncName) {
-			return v
+		if v.Func != nil && strings.EqualFold(v.Func.FuncName, name) {
+			return v.Func
 		}
 	}
 	return nil
+}
+
+func (d *Doc) ByFuncNameAndArgs(name string, args ...*string) bool {
+	f := d.ByFuncName(name)
+	if f == nil {
+		return false
+	}
+	record := make([]string, len(f.Args), len(f.Args))
+	for i, arg := range f.Args {
+		record[i] = arg
+	}
+	for i, _ := range args {
+		args[i] = &record[i]
+	}
+
+	return true
 }
 
 func ParseDoc(s string) (*Doc, error) {

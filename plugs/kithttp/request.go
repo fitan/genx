@@ -1,16 +1,17 @@
-package generator
+package kithttp
 
 import (
 	"fmt"
-	"github.com/fitan/genx/common"
-	"github.com/fitan/jennifer/jen"
 	"go/ast"
 	"go/token"
 	"go/types"
-	"golang.org/x/tools/go/packages"
 	"reflect"
 	"strings"
 	"unicode"
+
+	"github.com/fitan/genx/common"
+	"github.com/fitan/jennifer/jen"
+	"golang.org/x/tools/go/packages"
 )
 
 const (
