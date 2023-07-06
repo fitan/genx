@@ -11,11 +11,15 @@ import (
 type StructSerialize struct {
 	pkg         *packages.Package
 	namedRecord map[string]types.Type
-	Fields      []Field
+	Fields      []StructFieldMetaData
 }
 
-func (s *StructSerialize) Parse(t *types.Struct) (StructMetaDate, error) {
-	return StructMetaDate{}, nil
+func NewStructSerialize(pkg *packages.Package) *StructSerialize {
+	return &StructSerialize{pkg: pkg, namedRecord: make(map[string]types.Type), Fields: make([]StructFieldMetaData, 0)}
+}
+
+func (s *StructSerialize) Parse(t *types.Struct) (StructMetaData, error) {
+	return StructMetaData{}, nil
 }
 
 func (s *StructSerialize) parseStruct(t *types.Struct) {
@@ -25,7 +29,7 @@ func (s *StructSerialize) parseStruct(t *types.Struct) {
 func (s *StructSerialize) parseType(pre []string, fName string, t types.Type, tag reflect.StructTag, doc *Doc) {
 	switch tt := t.(type) {
 	case *types.Named:
-		// 	s.Fields = append(s.Fields, Field{
+		// 	s.Fields = append(s.Fields, StructFieldMetaData{
 		// 	Doc: doc,
 		// 	ID:  fName,
 		// 	Tag: tag,
@@ -35,7 +39,7 @@ func (s *StructSerialize) parseType(pre []string, fName string, t types.Type, ta
 		s.parseType(pre, fName, tt.Underlying(), tag, doc)
 
 	case *types.Struct:
-		s.Fields = append(s.Fields, Field{
+		s.Fields = append(s.Fields, StructFieldMetaData{
 			Doc:   doc,
 			ID:    fName,
 			Tag:   tag,
@@ -59,7 +63,7 @@ func (s *StructSerialize) parseType(pre []string, fName string, t types.Type, ta
 		s.parseType(pre, fName, tt.Elem(), tag, doc)
 	case *types.Slice:
 
-		s.Fields = append(s.Fields, Field{
+		s.Fields = append(s.Fields, StructFieldMetaData{
 			Doc:   doc,
 			ID:    fName,
 			Tag:   tag,
@@ -68,7 +72,7 @@ func (s *StructSerialize) parseType(pre []string, fName string, t types.Type, ta
 		})
 	case *types.Map:
 
-		s.Fields = append(s.Fields, Field{
+		s.Fields = append(s.Fields, StructFieldMetaData{
 			Doc:   doc,
 			ID:    fName,
 			Tag:   tag,
@@ -77,7 +81,7 @@ func (s *StructSerialize) parseType(pre []string, fName string, t types.Type, ta
 		})
 
 	case *types.Array:
-		s.Fields = append(s.Fields, Field{
+		s.Fields = append(s.Fields, StructFieldMetaData{
 			Doc:   doc,
 			ID:    fName,
 			Tag:   tag,
@@ -85,7 +89,7 @@ func (s *StructSerialize) parseType(pre []string, fName string, t types.Type, ta
 			Path:  pre,
 		})
 	case *types.Basic:
-		s.Fields = append(s.Fields, Field{
+		s.Fields = append(s.Fields, StructFieldMetaData{
 			Doc:   doc,
 			ID:    fName,
 			Tag:   tag,
@@ -95,11 +99,11 @@ func (s *StructSerialize) parseType(pre []string, fName string, t types.Type, ta
 	}
 }
 
-type StructMetaDate struct {
-	Fields []Field
+type StructMetaData struct {
+	Fields []StructFieldMetaData
 }
 
-type Field struct {
+type StructFieldMetaData struct {
 	Doc   *Doc
 	ID    string
 	Tag   reflect.StructTag

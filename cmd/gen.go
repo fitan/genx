@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"github.com/fitan/genx/gen"
+	"github.com/fitan/genx/plugs/gormq"
 	"github.com/fitan/genx/plugs/log"
 	"github.com/fitan/genx/plugs/trace"
 	"github.com/spf13/cobra"
@@ -31,6 +32,7 @@ to quickly create a Cobra application.`,
 
 		x.RegImpl(&log.Plug{})
 		x.RegImpl(&trace.Plug{})
+		x.RegStruct(&gormq.Plug{})
 		x.Gen()
 	},
 }

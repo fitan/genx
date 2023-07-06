@@ -82,8 +82,9 @@ func (x *X) parse() {
 							for _, line := range doc.Funcs {
 								if line.Func != nil {
 									x.Metas.Impl.NameGoTypeMap[line.Func.FuncName] = append(x.Metas.Impl.NameGoTypeMap[line.Func.FuncName], InterfaceGoTypeMeta{
-										Doc: doc,
-										Obj: x.Option.Pkg.TypesInfo.TypeOf(st.Type).(*types.Interface),
+										Name: st.Name.Name,
+										Doc:  doc,
+										Obj:  x.Option.Pkg.TypesInfo.TypeOf(st.Type).(*types.Interface),
 									})
 								}
 							}
@@ -91,8 +92,9 @@ func (x *X) parse() {
 							for _, line := range doc.Funcs {
 								if line.Func != nil {
 									x.Metas.Struct.NameGoTypeMap[line.Func.FuncName] = append(x.Metas.Struct.NameGoTypeMap[line.Func.FuncName], StructGoTypeMeta{
-										Doc: doc,
-										Obj: x.Option.Pkg.TypesInfo.TypeOf(st.Type).(*types.Struct),
+										Name: st.Name.Name,
+										Doc:  doc,
+										Obj:  x.Option.Pkg.TypesInfo.TypeOf(st.Type).(*types.Struct),
 									})
 								}
 							}
@@ -162,10 +164,14 @@ func NewX(dir string) (*X, error) {
 			Type: TypeMeta{
 				NameGoTypeMap: make(map[string][]TypeGoTypeMeta),
 			},
+			Struct: StructMeta{
+				NameGoTypeMap: make(map[string][]StructGoTypeMeta),
+			},
 		},
 		Plugs: Plugs{
-			Impl: make([]InterfacePlugImpl, 0),
-			Type: make([]TypePlugImpl, 0),
+			Impl:   make([]InterfacePlugImpl, 0),
+			Type:   make([]TypePlugImpl, 0),
+			Struct: make([]StructPlugImpl, 0),
 		},
 	}, nil
 }

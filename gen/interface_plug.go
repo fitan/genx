@@ -15,6 +15,7 @@ type ImplMeta struct {
 }
 
 type InterfaceGoTypeMeta struct {
+	Name   string
 	Doc    *common.Doc
 	Params []string
 	Obj    *types.Interface

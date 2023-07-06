@@ -7,8 +7,6 @@ type CheckIpInItem struct {
 	UUID string
 }
 
-// @gormM(types.User)
-// @gormP(Friends)
 type ListRequest struct {
 	// Page 页码
 	// @gormPage
@@ -453,4 +451,20 @@ var impiUserPassword = ImpiUserPassword{
 		"ADMIN",
 		"ADMIN",
 	},
+}
+
+// @GormModel(types.PhysicalMachine)
+type PMListReq struct {
+	// @gromq(Brand.ProductType,"=")
+	ProductType string
+	// @gormq(UUID, "=")
+	UUID string
+	// @gormq(Brand.UUID, "?=")
+	BrandUUID []string
+	// @gormq(Brand.Users.Name)
+	BrandUsersName string
+	// @gormq(Brand.ID, ">")
+	BrandID string
+	// @gormq(Brand.CreatedAt, "><")
+	BrandCreatedAt []string
 }

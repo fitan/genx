@@ -8,7 +8,6 @@ import (
 
 type Middleware func(Service) Service
 
-// @KitHttp
 // @log
 // @trace
 type Service interface {
