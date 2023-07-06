@@ -18,12 +18,10 @@ func NewStructSerialize(pkg *packages.Package) *StructSerialize {
 	return &StructSerialize{pkg: pkg, namedRecord: make(map[string]types.Type), Fields: make([]StructFieldMetaData, 0)}
 }
 
-func (s *StructSerialize) Parse(t *types.Struct) (StructMetaData, error) {
-	return StructMetaData{}, nil
-}
-
-func (s *StructSerialize) parseStruct(t *types.Struct) {
+func (s *StructSerialize) Parse(t *types.Struct) (res StructMetaData, err error) {
 	s.parseType([]string{}, "", t, "", nil)
+	res.Fields = s.Fields
+	return
 }
 
 func (s *StructSerialize) parseType(pre []string, fName string, t types.Type, tag reflect.StructTag, doc *Doc) {

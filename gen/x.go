@@ -1,9 +1,11 @@
 package gen
 
 import (
-	"github.com/fitan/genx/common"
 	"go/ast"
 	"go/types"
+	"strings"
+
+	"github.com/fitan/genx/common"
 	"golang.org/x/exp/slog"
 	"golang.org/x/tools/go/packages"
 )
@@ -46,7 +48,6 @@ func (x *X) Gen() {
 	x.typeGen()
 	x.implGen()
 	x.structGen()
-	return
 }
 
 func (x *X) parse() {
@@ -70,7 +71,8 @@ func (x *X) parse() {
 					case *ast.TypeSpec:
 						for _, line := range doc.Funcs {
 							if line.Func != nil {
-								x.Metas.Type.NameGoTypeMap[line.Func.FuncName] = append(x.Metas.Type.NameGoTypeMap[line.Func.FuncName], TypeGoTypeMeta{
+								key := strings.ToUpper(line.Func.FuncName)
+								x.Metas.Type.NameGoTypeMap[key] = append(x.Metas.Type.NameGoTypeMap[key], TypeGoTypeMeta{
 									Doc: doc,
 									Obj: x.Option.Pkg.TypesInfo.TypeOf(st.Type),
 								})
@@ -81,7 +83,8 @@ func (x *X) parse() {
 						case *ast.InterfaceType:
 							for _, line := range doc.Funcs {
 								if line.Func != nil {
-									x.Metas.Impl.NameGoTypeMap[line.Func.FuncName] = append(x.Metas.Impl.NameGoTypeMap[line.Func.FuncName], InterfaceGoTypeMeta{
+									key := strings.ToUpper(line.Func.FuncName)
+									x.Metas.Impl.NameGoTypeMap[key] = append(x.Metas.Impl.NameGoTypeMap[key], InterfaceGoTypeMeta{
 										Name: st.Name.Name,
 										Doc:  doc,
 										Obj:  x.Option.Pkg.TypesInfo.TypeOf(st.Type).(*types.Interface),
@@ -91,7 +94,8 @@ func (x *X) parse() {
 						case *ast.StructType:
 							for _, line := range doc.Funcs {
 								if line.Func != nil {
-									x.Metas.Struct.NameGoTypeMap[line.Func.FuncName] = append(x.Metas.Struct.NameGoTypeMap[line.Func.FuncName], StructGoTypeMeta{
+									key := strings.ToUpper(line.Func.FuncName)
+									x.Metas.Struct.NameGoTypeMap[key] = append(x.Metas.Struct.NameGoTypeMap[key], StructGoTypeMeta{
 										Name: st.Name.Name,
 										Doc:  doc,
 										Obj:  x.Option.Pkg.TypesInfo.TypeOf(st.Type).(*types.Struct),
@@ -112,7 +116,7 @@ func (x *X) parse() {
 
 func (x *X) implGen() {
 	for _, v := range x.Plugs.Impl {
-		metas, ok := x.Metas.Impl.NameGoTypeMap[v.Name()]
+		metas, ok := x.Metas.Impl.NameGoTypeMap[strings.ToUpper(v.Name())]
 		if ok {
 			err := v.Gen(x.Option, metas)
 			if err != nil {
@@ -124,7 +128,7 @@ func (x *X) implGen() {
 
 func (x *X) typeGen() {
 	for _, v := range x.Plugs.Type {
-		metas, ok := x.Metas.Type.NameGoTypeMap[v.Name()]
+		metas, ok := x.Metas.Type.NameGoTypeMap[strings.ToUpper(v.Name())]
 		if ok {
 			err := v.Gen(x.Option, metas)
 			if err != nil {
@@ -136,7 +140,7 @@ func (x *X) typeGen() {
 
 func (x *X) structGen() {
 	for _, v := range x.Plugs.Struct {
-		metas, ok := x.Metas.Struct.NameGoTypeMap[v.Name()]
+		metas, ok := x.Metas.Struct.NameGoTypeMap[strings.ToUpper(v.Name())]
 		if ok {
 			err := v.Gen(x.Option, metas)
 			if err != nil {

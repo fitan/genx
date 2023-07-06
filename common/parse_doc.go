@@ -49,16 +49,27 @@ func (d *Doc) ByFuncName(name string) *F {
 }
 
 func (d *Doc) ByFuncNameAndArgs(name string, args ...*string) bool {
+	if d == nil {
+		return false
+	}
 	f := d.ByFuncName(name)
 	if f == nil {
 		return false
 	}
-	record := make([]string, len(f.Args), len(f.Args))
+	record := make([]string, len(args), len(args))
 	for i, arg := range f.Args {
-		record[i] = arg
+		slog.Info("arg", slog.String("arg", arg))
+		value := arg
+		if strings.HasPrefix(`"`, arg) && strings.HasSuffix(`"`, arg) {
+			value = strings.Trim(arg, `"`)
+		}
+		if strings.HasPrefix(`'`, arg) && strings.HasSuffix(`'`, arg) {
+			value = strings.Trim(arg, `'`)
+		}
+		record[i] = value
 	}
 	for i, _ := range args {
-		args[i] = &record[i]
+		*args[i] = record[i]
 	}
 
 	return true

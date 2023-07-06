@@ -29,7 +29,7 @@ func (p *Plug) Gen(option gen.Option, implGoTypeMetes []gen.StructGoTypeMeta) (e
 
 		var modelS string
 
-		v.Doc.ByFuncNameAndArgs("@gormModel", &modelS)
+		v.Doc.ByFuncNameAndArgs(p.Name(), &modelS)
 
 		err = Gen(j, option.Pkg, v.Name, modelS, v.Obj, meta.Fields)
 		if err != nil {
