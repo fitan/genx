@@ -7,18 +7,24 @@ import (
 
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
-	"golang.org/x/exp/slog"
 	"golang.org/x/tools/go/packages"
 )
 
 var (
+	//enumLexer = lexer.MustSimple([]lexer.SimpleRule{
+	//	{"whitespace", `\s+`},
+	//	{"Punct", `[,)(]`},
+	//	{"FuncName", `^@[a-zA-Z][a-zA-Z_\d]*`},
+	//	//{"FuncTag", `^@[a-zA-Z][a-zA-Z_\d]*\(`},
+	//	{"String", `"(\\.|[^"])*"|'(\\.|[^'])*'`},
+	//	{"Ident", `[^ \f\n\r\t\v,)]+`},
+	//})
 	enumLexer = lexer.MustSimple([]lexer.SimpleRule{
 		{"whitespace", `\s+`},
-		{"Punct", `[,)(]`},
-		{"FuncName", `^@[a-zA-Z][a-zA-Z_\d]*`},
-		//{"FuncTag", `^@[a-zA-Z][a-zA-Z_\d]*\(`},
-		{"String", `"(\\.|[^"])*"|'(\\.|[^'])*'`},
-		{"Ident", `[^ \f\n\r\t\v,)]+`},
+		{`String`, `"(?:\\.|[^"])*"|'(?:\\.|[^'])*'`},
+		{"Punct", `[)(,]`},
+		{"Name", `^@[a-zA-Z][a-zA-Z_\d]*`},
+		{"Comment", `^[^@].+`},
 	})
 	parser = participle.MustBuild[Doc](
 		participle.Lexer(enumLexer),
@@ -30,13 +36,17 @@ type Doc struct {
 }
 
 type Func struct {
-	Others *string `@~FuncName`
+	Others *string `@Comment | @Name (?! "(")`
 	Func   *F      `| @@`
 }
 
 type F struct {
-	FuncName string   `@FuncName`
-	Args     []string `( "(" (@String | @Ident) ("," (@String | @Ident))* ")" )?`
+	FuncName string   `@Name`
+	Args     []string `( "(" ( @String ("," @String)* )? ")"  )`
+}
+
+func (f *F) UpFunkName() string {
+	return strings.ToUpper(f.FuncName)
 }
 
 func (d *Doc) ByFuncName(name string) *F {
@@ -65,7 +75,7 @@ func (d *Doc) ByFuncNameAndArgs(name string, args ...*string) bool {
 }
 
 func ParseDoc(s string) (*Doc, error) {
-	slog.Info("parse doc: ", slog.String("doc", s))
+	//slog.Info("parse doc: ", slog.String("doc", s))
 	return parser.ParseString("", s)
 }
 

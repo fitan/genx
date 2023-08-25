@@ -1,11 +1,15 @@
 package gen
 
 import (
+	"github.com/davecgh/go-spew/spew"
 	"github.com/fitan/genx/common"
 	"go/ast"
 	"go/types"
 	"golang.org/x/exp/slog"
+	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/go/packages"
+	"strings"
+	"time"
 )
 
 type TypeName int
@@ -17,15 +21,29 @@ type X struct {
 }
 
 type Metas struct {
-	Impl   ImplMeta
-	Type   TypeMeta
-	Struct StructMeta
+	Impl     ImplMeta
+	Type     TypeMeta
+	TypeSpec TypeSpecMeta
+	Struct   StructMeta
+	Func     FuncMeta
+	Call     CallMeta
 }
 
 type Plugs struct {
-	Impl   []InterfacePlugImpl
-	Type   []TypePlugImpl
-	Struct []StructPlugImpl
+	Impl     []InterfacePlugImpl
+	Type     []TypePlugImpl
+	TypeSpec []TypeSpecPlugImpl
+	Struct   []StructPlugImpl
+	Func     []FuncPlugImpl
+	Call     []CallPlugImpl
+}
+
+func (x *X) RegCall(plug CallPlugImpl) {
+	x.Plugs.Call = append(x.Plugs.Call, plug)
+}
+
+func (x *X) RegTypeSpec(plug TypeSpecPlugImpl) {
+	x.Plugs.TypeSpec = append(x.Plugs.TypeSpec, plug)
 }
 
 func (x *X) RegImpl(plug InterfacePlugImpl) {
@@ -40,19 +58,82 @@ func (x *X) RegStruct(plug StructPlugImpl) {
 	x.Plugs.Struct = append(x.Plugs.Struct, plug)
 }
 
+func (x *X) RegFunc(plug FuncPlugImpl) {
+	x.Plugs.Func = append(x.Plugs.Func, plug)
+}
+
 func (x *X) Gen() {
 	x.parse()
-	slog.Info("parse success", slog.Any("type", x.Metas.Type.NameGoTypeMap), slog.Any("impl", x.Metas.Impl.NameGoTypeMap))
 	x.typeGen()
 	x.implGen()
 	x.structGen()
+	x.typeSpecGen()
+	x.funcGen()
+	x.callGen()
 	return
 }
 
 func (x *X) parse() {
 	for _, v := range x.Option.Pkg.Syntax {
-		ast.Inspect(v, func(node ast.Node) bool {
-			switch t := node.(type) {
+		astutil.Apply(v, func(c *astutil.Cursor) bool {
+			switch t := c.Node().(type) {
+			case *ast.CallExpr:
+				callDoc := common.GetCommentByTokenPos(x.Option.Pkg, t.Pos())
+				if callDoc == nil {
+					return false
+				}
+
+				doc, err := common.ParseDoc(callDoc.Text())
+				if err != nil {
+					slog.Error("parse doc error", err, slog.String("doc", callDoc.Text()))
+					panic(err)
+				}
+
+				for _, line := range doc.Funcs {
+					if line.Func != nil {
+						var call CallGoTypeMeta
+						call.Name = t.Fun.(*ast.Ident).Name
+						call.Doc = doc
+						for _, param := range t.Args {
+							call.Params = append(call.Params, common.TypeOf(x.Option.Pkg.TypesInfo.TypeOf(param)))
+						}
+						for _, param := range c.Parent().(*ast.AssignStmt).Lhs {
+							call.Results = append(call.Results, common.TypeOf(x.Option.Pkg.TypesInfo.TypeOf(param)))
+						}
+						slog.Info("parse call", slog.String("name", line.Func.UpFunkName()))
+						x.Metas.Call.NameGoTypeMap[line.Func.UpFunkName()] = append(x.Metas.Call.NameGoTypeMap[line.Func.UpFunkName()], call)
+					}
+				}
+
+			case *ast.FuncDecl:
+				if t.Doc.Text() == "" {
+					return true
+				}
+
+				doc, err := common.ParseDoc(t.Doc.Text())
+				if err != nil {
+					slog.Error("parse doc error", err, slog.String("doc", t.Doc.Text()))
+					panic(err)
+				}
+				for _, line := range doc.Funcs {
+
+					if line.Func != nil {
+						var fn FuncGoTypeMeta
+						fn.Name = t.Name.Name
+						fn.Doc = doc
+						for _, param := range t.Type.Params.List {
+							fn.Params = append(fn.Params, common.TypeOf(x.Option.Pkg.TypesInfo.TypeOf(param.Type)))
+						}
+
+						for _, param := range t.Type.Results.List {
+							fn.Results = append(fn.Results, common.TypeOf(x.Option.Pkg.TypesInfo.TypeOf(param.Type)))
+						}
+
+						slog.Info("parse func", slog.String("name", line.Func.UpFunkName()))
+						x.Metas.Func.NameGoTypeMap[line.Func.UpFunkName()] = append(x.Metas.Func.NameGoTypeMap[line.Func.UpFunkName()], fn)
+					}
+				}
+
 			case *ast.ImportSpec:
 				x.Option.Imports = append(x.Option.Imports, t)
 			case *ast.GenDecl:
@@ -61,7 +142,7 @@ func (x *X) parse() {
 				}
 				doc, err := common.ParseDoc(t.Doc.Text())
 				if err != nil {
-					slog.Error("parse doc error", err, slog.String("doc", v.Doc.Text()))
+					slog.Error("parse doc error", err, slog.String("doc", t.Doc.Text()))
 					panic(err)
 				}
 
@@ -70,9 +151,16 @@ func (x *X) parse() {
 					case *ast.TypeSpec:
 						for _, line := range doc.Funcs {
 							if line.Func != nil {
-								x.Metas.Type.NameGoTypeMap[line.Func.FuncName] = append(x.Metas.Type.NameGoTypeMap[line.Func.FuncName], TypeGoTypeMeta{
+								slog.Info("parse type", slog.String("name", line.Func.UpFunkName()))
+								x.Metas.Type.NameGoTypeMap[line.Func.UpFunkName()] = append(x.Metas.Type.NameGoTypeMap[line.Func.UpFunkName()], TypeGoTypeMeta{
 									Doc: doc,
 									Obj: x.Option.Pkg.TypesInfo.TypeOf(st.Type),
+								})
+
+								slog.Info("parse typeSpec", slog.String("name", line.Func.UpFunkName()))
+								x.Metas.TypeSpec.NameGoTypeMap[line.Func.UpFunkName()] = append(x.Metas.TypeSpec.NameGoTypeMap[line.Func.UpFunkName()], TypeSpecGoTypeMeta{
+									Doc: doc,
+									Obj: st,
 								})
 							}
 						}
@@ -81,7 +169,8 @@ func (x *X) parse() {
 						case *ast.InterfaceType:
 							for _, line := range doc.Funcs {
 								if line.Func != nil {
-									x.Metas.Impl.NameGoTypeMap[line.Func.FuncName] = append(x.Metas.Impl.NameGoTypeMap[line.Func.FuncName], InterfaceGoTypeMeta{
+									slog.Info("parse impl", slog.String("name", line.Func.UpFunkName()))
+									x.Metas.Impl.NameGoTypeMap[line.Func.UpFunkName()] = append(x.Metas.Impl.NameGoTypeMap[line.Func.UpFunkName()], InterfaceGoTypeMeta{
 										Name: st.Name.Name,
 										Doc:  doc,
 										Obj:  x.Option.Pkg.TypesInfo.TypeOf(st.Type).(*types.Interface),
@@ -91,7 +180,8 @@ func (x *X) parse() {
 						case *ast.StructType:
 							for _, line := range doc.Funcs {
 								if line.Func != nil {
-									x.Metas.Struct.NameGoTypeMap[line.Func.FuncName] = append(x.Metas.Struct.NameGoTypeMap[line.Func.FuncName], StructGoTypeMeta{
+									slog.Info("parse struct", slog.String("name", line.Func.UpFunkName()))
+									x.Metas.Struct.NameGoTypeMap[line.Func.UpFunkName()] = append(x.Metas.Struct.NameGoTypeMap[line.Func.UpFunkName()], StructGoTypeMeta{
 										Name: st.Name.Name,
 										Doc:  doc,
 										Obj:  x.Option.Pkg.TypesInfo.TypeOf(st.Type).(*types.Struct),
@@ -106,17 +196,32 @@ func (x *X) parse() {
 				return true
 			}
 			return true
-		})
+		}, func(c *astutil.Cursor) bool { return true })
 	}
 }
 
 func (x *X) implGen() {
 	for _, v := range x.Plugs.Impl {
-		metas, ok := x.Metas.Impl.NameGoTypeMap[v.Name()]
+		metas, ok := x.Metas.Impl.NameGoTypeMap[strings.ToUpper(v.Name())]
 		if ok {
 			err := v.Gen(x.Option, metas)
 			if err != nil {
-				slog.Error("impl gen error", err, slog.String("name", v.Name()))
+				slog.Error("impl gen error", err, slog.String("name", strings.ToUpper(v.Name())))
+			}
+		}
+	}
+}
+
+func (x *X) callGen() {
+	for _, v := range x.Plugs.Call {
+		metas, ok := x.Metas.Call.NameGoTypeMap[strings.ToUpper(v.Name())]
+		if ok {
+			slog.Info("call gen start", slog.String("name", strings.ToUpper(v.Name())))
+			timeStart := time.Now()
+			err := v.Gen(x.Option, metas)
+			slog.Info("call gen end", slog.String("name", strings.ToUpper(v.Name())), slog.Duration("time", time.Since(timeStart)))
+			if err != nil {
+				slog.Error("call gen error", err, slog.String("name", strings.ToUpper(v.Name())))
 			}
 		}
 	}
@@ -124,11 +229,11 @@ func (x *X) implGen() {
 
 func (x *X) typeGen() {
 	for _, v := range x.Plugs.Type {
-		metas, ok := x.Metas.Type.NameGoTypeMap[v.Name()]
+		metas, ok := x.Metas.Type.NameGoTypeMap[strings.ToUpper(v.Name())]
 		if ok {
 			err := v.Gen(x.Option, metas)
 			if err != nil {
-				slog.Error("type gen error", err, slog.String("name", v.Name()))
+				slog.Error("type gen error", err, slog.String("name", strings.ToUpper(v.Name())))
 			}
 		}
 	}
@@ -136,21 +241,43 @@ func (x *X) typeGen() {
 
 func (x *X) structGen() {
 	for _, v := range x.Plugs.Struct {
-		metas, ok := x.Metas.Struct.NameGoTypeMap[v.Name()]
+		metas, ok := x.Metas.Struct.NameGoTypeMap[strings.ToUpper(v.Name())]
 		if ok {
 			err := v.Gen(x.Option, metas)
 			if err != nil {
-				slog.Error("struct gen error", err, slog.String("name", v.Name()))
+				slog.Error("struct gen error", err, slog.String("name", strings.ToUpper(v.Name())))
 			}
 		}
 	}
 }
 
-func NewX(dir string) (*X, error) {
-	p, err := common.LoadPkg(dir)
-	if err != nil {
-		return nil, err
+func (x *X) funcGen() {
+	for _, v := range x.Plugs.Func {
+		metas, ok := x.Metas.Func.NameGoTypeMap[strings.ToUpper(v.Name())]
+		if ok {
+			slog.Info("func gen", slog.String("name", strings.ToUpper(v.Name())))
+			spew.Dump(metas)
+			err := v.Gen(x.Option, metas)
+			if err != nil {
+				slog.Error("func gen error", err, slog.String("name", strings.ToUpper(v.Name())))
+			}
+		}
 	}
+}
+
+func (x *X) typeSpecGen() {
+	for _, v := range x.Plugs.TypeSpec {
+		metas, ok := x.Metas.TypeSpec.NameGoTypeMap[strings.ToUpper(v.Name())]
+		if ok {
+			err := v.Gen(x.Option, metas)
+			if err != nil {
+				slog.Error("struct gen error", err, slog.String("name", strings.ToUpper(v.Name())))
+			}
+		}
+	}
+}
+
+func NewXByPkg(p *packages.Package) (*X, error) {
 	return &X{
 		Option: Option{
 			Pkg:             p,
@@ -167,13 +294,33 @@ func NewX(dir string) (*X, error) {
 			Struct: StructMeta{
 				NameGoTypeMap: make(map[string][]StructGoTypeMeta),
 			},
+			TypeSpec: TypeSpecMeta{
+				NameGoTypeMap: make(map[string][]TypeSpecGoTypeMeta),
+			},
+			Func: FuncMeta{
+				NameGoTypeMap: make(map[string][]FuncGoTypeMeta),
+			},
+			Call: CallMeta{
+				NameGoTypeMap: make(map[string][]CallGoTypeMeta),
+			},
 		},
 		Plugs: Plugs{
-			Impl:   make([]InterfacePlugImpl, 0),
-			Type:   make([]TypePlugImpl, 0),
-			Struct: make([]StructPlugImpl, 0),
+			Impl:     make([]InterfacePlugImpl, 0),
+			Type:     make([]TypePlugImpl, 0),
+			TypeSpec: make([]TypeSpecPlugImpl, 0),
+			Struct:   make([]StructPlugImpl, 0),
+			Func:     make([]FuncPlugImpl, 0),
+			Call:     make([]CallPlugImpl, 0),
 		},
 	}, nil
+}
+
+func NewX(dir string) (*X, error) {
+	p, err := common.LoadPkg(dir)
+	if err != nil {
+		return nil, err
+	}
+	return NewXByPkg(p)
 }
 
 type Option struct {

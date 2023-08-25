@@ -1,0 +1,78 @@
+package common
+
+import (
+	"fmt"
+	"golang.org/x/tools/go/packages"
+	"os"
+	"path/filepath"
+	"unicode"
+)
+
+func DownFirst(s string) string {
+	for _, v := range s {
+		return string(unicode.ToLower(v)) + s[len(string(v)):]
+	}
+	return ""
+}
+
+func UpFirst(s string) string {
+	for _, v := range s {
+		return string(unicode.ToUpper(v)) + s[len(string(v)):]
+	}
+	return ""
+}
+
+// 获取项目的根目录
+func GetProjectRoot() (string, error) {
+	currentDir, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+
+	for {
+		// 检查当前目录是否包含 go.mod 文件
+		goModPath := filepath.Join(currentDir, "go.mod")
+		_, err := os.Stat(goModPath)
+		if err == nil {
+			return currentDir, nil
+		}
+
+		// 到达文件系统的根目录时停止查找
+		if currentDir == filepath.Dir(currentDir) {
+			break
+		}
+
+		// 向上一级目录继续查找
+		currentDir = filepath.Dir(currentDir)
+	}
+
+	return "", fmt.Errorf("未找到项目根目录")
+}
+
+func DepPkg(pkg *packages.Package, record map[string]*packages.Package) {
+	for k, v := range pkg.Imports {
+		if _, ok := record[k]; !ok {
+			record[k] = v
+
+			for _, v1 := range v.Imports {
+				DepPkg(v1, record)
+			}
+		}
+	}
+	//var pkgs []*packages.Package
+	//pkgs = append(pkgs, pkg)
+	//for {
+	//	var p *packages.Package
+	//	if len(pkgs) == 0 {
+	//		return
+	//	}
+	//	p = pkgs[0]
+	//	pkgs = pkgs[1:]
+	//
+	//	slog.Info("load pkg dep pkg", "name", pkg.Name)
+	//
+	//	for _, v := range p.Imports {
+	//		pkgs = append(pkgs, v)
+	//	}
+	//}
+}
