@@ -10,6 +10,7 @@ type Middleware func(Service) Service
 
 // @log
 // @trace
+//go:generate genx gen
 type Service interface {
 	// List 获取所有物理机
 	// @kitUrl("/device/physicalmachine", "GET")

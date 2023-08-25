@@ -2,11 +2,13 @@ package gormq
 
 import (
 	"fmt"
+	"go/types"
+	"strings"
+
 	"github.com/fitan/genx/common"
 	"github.com/fitan/jennifer/jen"
-	"go/types"
+	"golang.org/x/exp/slog"
 	"golang.org/x/tools/go/packages"
-	"strings"
 )
 
 type GormQ struct {
@@ -26,27 +28,33 @@ type MetaData struct {
 }
 
 func (g GormQ) gen() (err error) {
+	slog.Info("gen", slog.Any("g", g.MetaDatas))
 	for _, f := range g.MetaDatas {
 		metaData := MetaData{}
-		has := f.Doc.ByFuncNameAndArgs("gormq", &metaData.GormModelFieldPath, &metaData.Op)
+		has := f.Doc.ByFuncNameAndArgs("@gormq", &metaData.GormModelFieldPath, &metaData.Op)
 		if !has {
 			continue
 		}
 
 		if metaData.GormModelFieldPath == "" {
-			err = fmt.Errorf("gormq: %s is empty", f.Path)
+			err = fmt.Errorf("@gormq: %s is empty", f.Path)
 			return
+		}
+
+		if metaData.Op == "" {
+			metaData.Op = "="
 		}
 
 		metaData.ObjFieldPath = strings.Join(f.Path, ".")
 
 		g.GenMetaData = append(g.GenMetaData, metaData)
 	}
+	slog.Info("genmetadata", slog.Any("GenMetaData", g.GenMetaData))
 
 	g.J.Func().Params(
 		jen.Id("g").Id(g.ObjName),
 	).Id("GormQScopes").Params(jen.Id("res").Id("[]func(*gorm.DB) *gorm.DB"), jen.Id("err").Error()).Block(
-		jen.Id("req").Op(":=").Make(jen.Index().Qual("github.com/fitan/mykit/mygorm", "GenxScopesReq")), jen.Lit(0),
+		jen.Id("req").Op(":=").Make(jen.Index().Qual("github.com/fitan/mykit/mygorm", "GenxScopesReq"), jen.Lit(0)),
 		func() jen.Code {
 			code := jen.Line()
 			for _, v := range g.GenMetaData {
@@ -55,7 +63,7 @@ func (g GormQ) gen() (err error) {
 						jen.Id("Field"): jen.Lit(v.GormModelFieldPath),
 						jen.Id("Op"):    jen.Lit(v.Op),
 						jen.Id("Value"): jen.Id("g").Dot(v.ObjFieldPath),
-					}))
+					})).Line()
 			}
 			return code
 		}(),
