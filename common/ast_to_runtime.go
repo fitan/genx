@@ -3,7 +3,9 @@ package common
 import (
 	"go/types"
 	"golang.org/x/exp/slog"
+	"gorm.io/gorm"
 	"reflect"
+	"time"
 )
 
 func TypesStruct2RuntimeStruct(t *types.Struct) reflect.Type {
@@ -47,11 +49,18 @@ func TypesPoint2RuntimePoint(t *types.Pointer) reflect.Type {
 	return reflect.PtrTo(TypesType2ReflectType(t.Elem()))
 }
 
-func TypesType2ReflectType(p types.Type) reflect.Type {
-	slog.Info("TypesType2ReflectType", slog.Any("p", p))
-
+func TypesType2ReflectType(p types.Type) (res reflect.Type) {
 	switch pt := p.(type) {
 	case *types.Named:
+		switch pt.String() {
+		case "gorm.io/gorm.Model":
+			return reflect.TypeOf(gorm.Model{})
+		case "time.Time":
+			return reflect.TypeOf(time.Time{})
+		case "gorm.io/gorm.DeletedAt":
+			return reflect.TypeOf(gorm.DeletedAt{})
+		}
+
 		return TypesType2ReflectType(pt.Underlying())
 	case *types.Struct:
 		return TypesStruct2RuntimeStruct(pt)

@@ -68,7 +68,6 @@ func (d *Doc) ByFuncNameAndArgs(name string, args ...*string) bool {
 	}
 	record := make([]string, len(args), len(args))
 	for i, arg := range f.Args {
-		slog.Info("arg", slog.String("arg", arg))
 		value := arg
 		if strings.HasPrefix(`"`, arg) && strings.HasSuffix(`"`, arg) {
 			value = strings.Trim(arg, `"`)

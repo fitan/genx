@@ -259,13 +259,13 @@ func (d *Copy) Gen() {
 		return
 	}
 	bind := make(jen.Statement, 0)
-	bind = append(bind, jen.Comment("basic ="))
+	bind = append(bind, jen.Comment("basic map"))
 	bind = append(bind, d.GenBasic()...)
-	bind = append(bind, jen.Comment("slice = "))
+	bind = append(bind, jen.Comment("slice map"))
 	bind = append(bind, d.GenSlice()...)
-	bind = append(bind, jen.Comment("map = "))
+	bind = append(bind, jen.Comment("map map"))
 	bind = append(bind, d.GenMap()...)
-	bind = append(bind, jen.Comment("pointer = "))
+	bind = append(bind, jen.Comment("pointer map"))
 	bind = append(bind, d.GenPointer()...)
 	bind = append(bind, jen.Return())
 

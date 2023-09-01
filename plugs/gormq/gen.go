@@ -11,6 +11,46 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
+// FindMany
+type PMMany struct {
+	Where    struct{}
+	OrderBy  struct{}
+	Select   struct{}
+	Include  struct{}
+	Distinct struct{}
+	Skip     int
+	Cursor   struct{}
+	Take     int
+}
+
+// 查询物理机 findFirst
+type PMQuery struct {
+	Select struct {
+	}
+	Include struct {
+	}
+	Where struct {
+		IP struct {
+			Equals     string
+			Not        string
+			In         []string
+			NotIn      string
+			Lt         string
+			Lte        string
+			Gt         string
+			Gte        string
+			Contains   string
+			StartsWith string
+			EndsWith   string
+
+			OR struct {
+			}
+			AND struct {
+			}
+		}
+	}
+}
+
 type GormQ struct {
 	J           *jen.File
 	Pkg         *packages.Package

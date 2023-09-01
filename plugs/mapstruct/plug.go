@@ -2,12 +2,15 @@ package mapstruct
 
 import (
 	"encoding/json"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/fitan/genx/common"
 	"github.com/fitan/genx/gen"
 	"github.com/fitan/jennifer/jen"
 	"github.com/pkg/errors"
 	"golang.org/x/exp/slog"
+	"gorm.io/gorm/schema"
 	"reflect"
+	"sync"
 )
 
 type Plug struct {
@@ -30,10 +33,12 @@ func (s Plug) Gen(option gen.Option, callGoTypeMetes []gen.CallGoTypeMeta) error
 		objName := v.Name + "MapStruct"
 
 		refT := common.TypesType2ReflectType(destType.T)
-		slog.Info("spew.Dump")
-		slog.Info("reflect. type .", reflect.TypeOf(refT).String())
-		slog.Info("ref valueof", reflect.ValueOf(refT).Interface())
-		jsonb, err := json.Marshal(reflect.ValueOf(refT).Interface())
+		tSchema, err := schema.Parse(reflect.New(refT).Elem().Interface(), &sync.Map{}, schema.NamingStrategy{})
+		if err != nil {
+			return errors.Wrap(err, "schema.Parse")
+		}
+		spew.Dump(tSchema.Fields)
+		jsonb, err := json.Marshal(reflect.New(refT).Elem().Interface())
 		if err != nil {
 			return err
 		}
