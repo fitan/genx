@@ -4,11 +4,13 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/fitan/genx/common"
+	"github.com/samber/lo"
 	"go/types"
+	"golang.org/x/exp/slices"
 	"golang.org/x/exp/slog"
-	"log"
-	"reflect"
+	"golang.org/x/tools/go/types/typeutil"
 	"strings"
 
 	"github.com/fitan/jennifer/jen"
@@ -17,13 +19,32 @@ import (
 
 const CopyTag = "copy"
 const structMapFormat = "@MapStructFormat"
+const MapTag = "@MapTag"
 
 type Field struct {
-	Path    []string
-	Name    string
-	TagMust bool
-	Type    *common.Type
-	Doc     *common.Doc
+	Path []string
+	Name string
+	Type *common.Type
+	Doc  *common.Doc
+
+	HasMapTag bool
+	MapID     string
+	MapMust   bool
+}
+
+func (f *Field) ParseMapTag() {
+	var id, sourceMust string
+	if f.Doc.ByFuncNameAndArgs(MapTag, &id, &sourceMust) {
+
+		f.HasMapTag = true
+		f.MapID = id
+		if sourceMust == "must" {
+			f.MapMust = true
+		}
+
+		slog.Info("parseMapTag", "field", f.Name, "id", id, "sourceMust", sourceMust)
+	}
+	return
 }
 
 func (f Field) CopyMethod() (s1, s2 string) {
@@ -53,31 +74,63 @@ func (f Field) FieldName(s string) string {
 	hash := sha1.New()
 	hash.Write([]byte(s))
 	b := hash.Sum(nil)
-	fmt.Println("s:", s, "b:", hex.EncodeToString(b)[0:4])
 	return strings.ToLower(f.Path[len(f.Path)-1][0:1]) + f.Path[len(f.Path)-1][1:] + hex.EncodeToString(b)[0:4]
 }
 
 type DataFieldMap struct {
-	Pkg        *packages.Package
-	Name       string
-	Type       *common.Type
-	NamedMap   map[string]Field
-	PointerMap map[string]Field
-	SliceMap   map[string]Field
-	MapMap     map[string]Field
-	BasicMap   map[string]Field
+	Pkg           *packages.Package
+	Name          string
+	Type          *common.Type
+	NamedMap      OrderMap
+	PointerMap    OrderMap
+	SliceMap      OrderMap
+	MapMap        OrderMap
+	BasicMap      OrderMap
+	MapMethodList []MapMethod
+}
+
+type OrderMap map[string]Field
+
+func (o OrderMap) GetByField(f Field) (Field, bool) {
+	fName := lo.Ternary(f.HasMapTag, f.MapID, f.Name)
+	for _, v := range o {
+		vName := lo.Ternary(v.HasMapTag, v.MapID, v.Name)
+		if fName == vName && slices.Equal(lo.DropRight(v.Path, 1), lo.DropRight(f.Path, 1)) {
+			return v, true
+		}
+	}
+	return Field{}, false
+}
+
+func (o OrderMap) OrderKeys() []string {
+	var keys []string
+	for k := range o {
+		keys = append(keys, k)
+	}
+
+	slices.Sort(keys)
+	return keys
+}
+
+type MapMethod struct {
+	Name     string
+	ParamID  string
+	ResultID string
+	IsError  bool
 }
 
 func NewDataFieldMap(pkg *packages.Package, prefix []string, name string, commonType *common.Type) *DataFieldMap {
+	slog.Info("NewDataFieldMapTypeString", "str", commonType.T.String())
 	m := &DataFieldMap{
-		Pkg:        pkg,
-		Name:       name,
-		Type:       commonType,
-		NamedMap:   map[string]Field{},
-		PointerMap: map[string]Field{},
-		SliceMap:   map[string]Field{},
-		MapMap:     map[string]Field{},
-		BasicMap:   map[string]Field{},
+		Pkg:           pkg,
+		Name:          name,
+		Type:          commonType,
+		NamedMap:      map[string]Field{},
+		PointerMap:    map[string]Field{},
+		SliceMap:      map[string]Field{},
+		MapMap:        map[string]Field{},
+		BasicMap:      map[string]Field{},
+		MapMethodList: []MapMethod{},
 	}
 	m.Parse(Field{
 		Path: prefix,
@@ -85,27 +138,66 @@ func NewDataFieldMap(pkg *packages.Package, prefix []string, name string, common
 		Type: commonType,
 		Doc:  nil,
 	})
+
+	methodSet := typeutil.IntuitiveMethodSet(commonType.T, nil)
+	lo.ForEach(methodSet, func(item *types.Selection, index int) {
+		if strings.Contains(item.Obj().Name(), "GenXMap") {
+			slog.Info("find method", "id", item.Obj().Id(), "name", item.Obj().Name(), "type", item.Obj().Type().String())
+			sig := item.Type().(*types.Signature)
+			var paramList []string
+			var resultList []string
+			for i := 0; i < sig.Params().Len(); i++ {
+				paramList = append(paramList, sig.Params().At(i).Type().String())
+			}
+
+			for i := 0; i < sig.Results().Len(); i++ {
+				resultList = append(resultList, sig.Results().At(i).Type().String())
+			}
+
+			mapMethod := MapMethod{}
+			mapMethod.Name = item.Obj().Name()
+			if len(paramList) > 0 {
+				mapMethod.ParamID = paramList[0]
+			}
+			if lo.Contains(resultList, "error") {
+				mapMethod.IsError = true
+			}
+
+			m.MapMethodList = append(m.MapMethodList, mapMethod)
+			for i := 0; i < sig.RecvTypeParams().Len(); i++ {
+				rtp := sig.RecvTypeParams().At(i)
+				slog.Info("rtp", "string", rtp.String())
+				slog.Info("rtp", "constraint string", rtp.Constraint().String())
+				spew.Dump(rtp.Obj())
+			}
+		}
+	})
 	return m
 }
 
 func (d *DataFieldMap) saveField(m map[string]Field, name string, field Field) {
-	var oldField Field
-	var ok bool
-	if oldField, ok = m[name]; !ok {
-		m[name] = field
+	//var oldField Field
+	//var ok bool
+	mapID := strings.Join(field.Path, ".")
+	if oldField, ok := m[mapID]; !ok {
+		m[mapID] = field
 		return
+	} else {
+		slog.Error("MapID 重复.", "Path", strings.Join(field.Path, "."), "oldPath", strings.Join(oldField.Path, "."))
+		panic(fmt.Sprintf("MapID: %s 重复. 路径地址： %s."))
 	}
 
 	//fmt.Printf("作用域内重复定义: %s. src.DestIdPath: %s, src.SrcIdPath: %s, dest.DestIdPath: %s, dest.SrcIdPath: %s \n", name, oldField.DestIdPath().GoString(), oldField.SrcIdPath().GoString(), field.DestIdPath().GoString(), field.SrcIdPath().GoString())
-	if len(oldField.Path) > len(field.Path) {
-		m[name] = field
-	}
+	//if len(oldField.Path) > len(field.Path) {
+	//	m[name] = field
+	//}
 
 	return
 }
 
 // func (d *DataFieldMap) Parse(prefix []string, name string, t types.Type, doc *ast.CommentGroup) {
 func (d *DataFieldMap) Parse(f Field) {
+	(&f).ParseMapTag()
 	switch v := f.Type.T.(type) {
 	case *types.Pointer:
 		d.saveField(d.PointerMap, f.Name, f)
@@ -134,18 +226,18 @@ func (d *DataFieldMap) Parse(f Field) {
 				continue
 			}
 			indexName := field.Name()
-			tagMust := false
-			tag, ok := reflect.StructTag(v.Tag(i)).Lookup(CopyTag)
-			if ok {
-				tags := strings.Split(tag, ",")
-				tagName := tags[0]
-				if tagName != "" {
-					indexName = tagName
-				}
-				if tags[1] == "must" {
-					tagMust = true
-				}
-			}
+			//tagMust := false
+			//tag, ok := reflect.StructTag(v.Tag(i)).Lookup(CopyTag)
+			//if ok {
+			//	tags := strings.Split(tag, ",")
+			//	tagName := tags[0]
+			//	if tagName != "" {
+			//		indexName = tagName
+			//	}
+			//	if tags[1] == "must" {
+			//		tagMust = true
+			//	}
+			//}
 			fieldDoc := common.GetCommentByTokenPos(d.Pkg, field.Pos())
 			parseDoc, err := common.ParseDoc(fieldDoc.Text())
 			if err != nil {
@@ -153,11 +245,11 @@ func (d *DataFieldMap) Parse(f Field) {
 				panic(err)
 			}
 			d.Parse(Field{
-				Path:    append(f.Path[0:], field.Name()),
-				Name:    indexName,
-				TagMust: tagMust,
-				Type:    common.TypeOf(field.Type()),
-				Doc:     parseDoc,
+				Path: append(f.Path[0:], field.Name()),
+				Name: indexName,
+				//TagMust: tagMust,
+				Type: common.TypeOf(field.Type()),
+				Doc:  parseDoc,
 			})
 		}
 		return
@@ -267,6 +359,8 @@ func (d *Copy) Gen() {
 	bind = append(bind, d.GenMap()...)
 	bind = append(bind, jen.Comment("pointer map"))
 	bind = append(bind, d.GenPointer()...)
+	bind = append(bind, jen.Comment("method map"))
+	bind = append(bind, d.GenMapMethod()...)
 	bind = append(bind, jen.Return())
 
 	fn.Block(bind...)
@@ -290,10 +384,14 @@ func (d *Copy) GenExtraCopyMethod(bind *jen.Statement, destV, srcV Field) (has b
 
 func (d *Copy) GenBasic() jen.Statement {
 	bind := make(jen.Statement, 0)
-	for _, v := range d.Dest.BasicMap {
-		srcV, ok := d.Src.BasicMap[v.Name]
+	for _, k := range d.Dest.BasicMap.OrderKeys() {
+		v := d.Dest.BasicMap[k]
+		srcV, ok := d.Src.BasicMap.GetByField(v)
 		if !ok {
-			log.Printf("not found %s in %s\n", v.Name, d.SumPath())
+			//if !must {
+			//	slog.Error("not found", "name", v.Name, "path", sourceID)
+			//	panic("not found")
+			//}
 			continue
 		}
 
@@ -309,11 +407,7 @@ func (d *Copy) GenBasic() jen.Statement {
 		//	bind.Add(v.DestIdPath().Op("=").Add(dtoMethod.Call(srcV.SrcIdPath())))
 		//	continue
 		//}
-		bind = append(bind, jen.Comment("basic = "+v.Name))
-		bind = append(bind, jen.Comment(strings.Join(v.Path, ".")))
-		bind = append(bind, jen.Comment(v.SrcIdPath().GoString()))
-		bind = append(bind, jen.Comment(v.DestIdPath().GoString()))
-
+		bind = append(bind, jen.Comment("source: "+v.SrcIdPath().GoString()+" target: "+v.DestIdPath().GoString()))
 		bind.Add(v.DestIdPath().Op("=").Add(srcV.SrcIdPath()))
 	}
 	return bind
@@ -321,8 +415,9 @@ func (d *Copy) GenBasic() jen.Statement {
 
 func (d *Copy) GenMap() jen.Statement {
 	bind := make(jen.Statement, 0)
-	for _, v := range d.Dest.MapMap {
-		srcV, ok := d.Src.MapMap[v.Name]
+	for _, key := range d.Dest.MapMap.OrderKeys() {
+		v := d.Dest.MapMap[key]
+		srcV, ok := d.Src.MapMap.GetByField(v)
 		if !ok {
 			fmt.Printf("not found %s in %s\n", v.Name, d.SumPath())
 			continue
@@ -376,10 +471,21 @@ func (d *Copy) GenMap() jen.Statement {
 	return bind
 }
 
+func (d *Copy) GenMapMethod() jen.Statement {
+	bind := make(jen.Statement, 0)
+	lo.ForEach(d.Dest.MapMethodList, func(item MapMethod, index int) {
+		if item.ParamID == d.Src.Type.T.String() {
+			bind.Add(jen.Id("(&dest)").Dot(item.Name).Call(jen.Id("src")).Line())
+		}
+	})
+	return bind
+}
+
 func (d *Copy) GenPointer() jen.Statement {
 	bind := make(jen.Statement, 0)
-	for _, v := range d.Dest.PointerMap {
-		srcV, ok := d.Src.PointerMap[v.Name]
+	for _, key := range d.Dest.PointerMap.OrderKeys() {
+		v := d.Dest.PointerMap[key]
+		srcV, ok := d.Src.PointerMap.GetByField(v)
 		if !ok {
 			fmt.Printf("not found %s in %s\n", v.Name, d.SumPath())
 			continue
@@ -433,11 +539,9 @@ func (d *Copy) GenPointer() jen.Statement {
 
 func (d *Copy) GenSlice() jen.Statement {
 	bind := make(jen.Statement, 0)
-	for _, v := range d.Dest.SliceMap {
-		srcV, ok := d.Src.SliceMap[v.Name]
-		if v.Name == "Cabinets" {
-			fmt.Println("find genCabinets: ", v.DestIdPath().GoString(), v.Type.T.String(), "find srcv: ", ok)
-		}
+	for _, key := range d.Dest.SliceMap.OrderKeys() {
+		v := d.Dest.SliceMap[key]
+		srcV, ok := d.Src.SliceMap.GetByField(v)
 		if !ok {
 			fmt.Printf("not found %s in %s\n", v.Name, d.SumPath())
 			continue

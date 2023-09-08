@@ -80,3 +80,120 @@ type User struct {
 func (b *Brand) TableName() string {
 	return "assets_brand"
 }
+
+type ListResponseDTO struct {
+	UUID string `json:"uuid"`
+	// 设备UUID
+	DeviceUUID string `json:"deviceUuid"`
+	// 品牌信息
+	Brand Brand `json:"brand"`
+
+	// cpu品牌信息
+	CpuBrand Brand `json:"cpuBrand"`
+
+	// 内存品牌信息
+	MemoryBrand Brand `json:"memoryBrand"`
+	// 内存数量
+	MemoryCount int `json:"memoryCount"`
+
+	// 硬盘品牌信息
+	DiskBrand Brand `json:"diskBrand"`
+	// 硬盘数量
+	DiskCount int `json:"diskCount"`
+
+	// 网卡品牌信息
+	NetworkCardBrand Brand `json:"networkCardBrand"`
+	// 网卡数量
+	NetworkCardCount int `json:"networkCardCount"`
+
+	// 系统品牌信息
+	OsBrand Brand `json:"osBrand"`
+
+	// 供应商信息
+	Supplier Supplier `json:"supplier"`
+
+	// 业务ip
+	BusinessIp string `json:"businessIp"`
+	// 业务子网掩码
+	BusinessSubnetMask string `json:"businessSubnetMask"`
+	// nasIp
+	NasIp string `json:"nasIp"`
+	// nas子网掩码
+	NasSubnetMask string `json:"nasSubnetMask"`
+	// IPMIIP
+	IpmiIp string `json:"ipmiIp"`
+	// ipmi子网掩码
+	IpmiSubnetMask string `json:"ipmiSubnetMask"`
+	// sn
+	Sn string `json:"sn"`
+
+	// 跳板机登录端口
+	JumpPort int `json:"jumpPort"`
+	// 环境  1:生产 2:测试 3:开发
+	Env int `json:"env"`
+	// 状态  1:使用中 2：故障 3：关机
+	Status int `json:"status"`
+
+	// 维护状态 1:正常 2:维护中
+	MaintainStatus int `json:"maintainStatus"`
+
+	// 备注
+	Remark string `json:"remark"`
+
+	// namespace 项目名称
+	Namespace string `json:"namespace"`
+	// namespaceAlias 项目别名
+	NamespaceAlias string `json:"namespaceAlias"`
+	// name 服务名称
+	Name string `json:"name"`
+	// nameAlias 服务别名
+	NameAlias string `json:"nameAlias"`
+
+	// 维保起始时间
+	MaintenanceStartTime string `json:"maintenanceStartTime"`
+
+	// 维保到期时间
+	MaintenanceExpireTime string `json:"maintenanceExpireTime"`
+
+	// 负责人
+	Owners []string `json:"owners"`
+
+	// 机房名字
+	ComputerRoomName string `json:"computerRoomName"`
+	ComputerRoomUUID string `json:"computerRoomUuid"`
+	// 机柜名字
+	CabinetName string `json:"cabinetName"`
+
+	// 机柜UUID
+	CabinetUUID string `json:"cabinetUuid" valid:"required"`
+	// 起始层数
+	StartLayer int `json:"startLayer" valid:"required"`
+	// 终止层数
+	EndLayer int `json:"endLayer" valid:"required"`
+
+	PhysicalMachineName string `json:"physicalMachineName"`
+
+	CpuCount int64 `json:"cpuCount"`
+
+	MemorySize int64 `json:"memorySize"`
+
+	DiskSize int64 `json:"diskSize"`
+
+	// 去连接设备
+	//ToDevices []Device `json:"toDevice"`
+	//连接我的设备
+	//FromDevices []Device `json:"fromDevice"`
+}
+
+type Supplier struct {
+	// uuid
+	UUID string `json:"uuid"`
+	// 名字
+	Name string `json:"name"`
+	// 联系方式
+	Contact string `json:"contact"`
+	// 地址
+	Address string `json:"address"`
+	// 备注
+	Remark string `json:"remark"`
+}

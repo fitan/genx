@@ -4,9 +4,14 @@ go 1.20
 
 require (
 	github.com/alecthomas/participle/v2 v2.0.0
+	github.com/davecgh/go-spew v1.1.1
 	github.com/fitan/jennifer v0.0.0-20221109093939-57a62ac0ad5b
+	github.com/fitan/mykit v0.0.0-20230706111911-4664bd2432a6
 	github.com/go-kit/kit v0.12.0
+	github.com/google/uuid v1.3.1
 	github.com/opentracing/opentracing-go v1.2.0
+	github.com/pkg/errors v0.9.1
+	github.com/samber/lo v1.38.1
 	github.com/spf13/cobra v1.7.0
 	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1
 	golang.org/x/tools v0.10.0
@@ -15,7 +20,7 @@ require (
 
 require (
 	github.com/dave/jennifer v1.6.1 // indirect
-	github.com/go-kit/log v0.2.0 // indirect
+	github.com/go-kit/log v0.2.1 // indirect
 	github.com/go-logfmt/logfmt v0.5.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect

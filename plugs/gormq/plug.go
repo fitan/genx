@@ -7,6 +7,7 @@ import (
 	"golang.org/x/exp/slog"
 )
 
+//go:generate gowrap gen -g -p ./
 type Plug struct {
 }
 

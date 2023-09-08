@@ -11,6 +11,55 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
+/*
+@enum(
+"Eq:=",
+"Neq:<>",
+"In:IN",
+"NotIn:NOT IN",
+"Lt:<",
+"Lte:<=",
+"Gt:>",
+"Gte:>=",
+"OR:OR",
+"AND:AND"
+)
+*/
+type SqlWhereOp int
+
+// @enum("customize:自定义","column:数据库字段","associate:关联表")
+type WhereFieldType int
+
+type SelectGen struct {
+}
+
+type IncludeGen struct {
+}
+
+type WhereGen struct {
+	FieldType WhereFieldType
+	Column    string
+	Op        SqlWhereOp
+	Path      []string
+	Next      []WhereGen
+}
+
+func (w WhereGen) Gen() jen.Statement {
+	return jen.Id("s").Dot(strings.Join(w.Path, "."))
+}
+
+func (w WhereGen) ColumnGen() jen.Statement {
+	codes := make([]jen.Code, 0)
+	codes = append(codes, jen.Lit(fmt.Sprintf("%s %s ?", w.Column, w.Op.String())))
+	codes = append(codes, jen.Id("s").Dot(strings.Join(w.Path, ".")))
+	return codes
+}
+
+func (w WhereGen)
+
+type OrderByGen struct {
+}
+
 // FindMany
 type PMMany struct {
 	Where    struct{}
@@ -24,14 +73,14 @@ type PMMany struct {
 }
 
 // 查询物理机 findFirst
-type PMQuery struct {
+type PMFirst struct {
 	Select struct {
 	}
 	Include struct {
 	}
 	Where struct {
 		IP struct {
-			Equals     string
+			Eq         string
 			Not        string
 			In         []string
 			NotIn      string
@@ -49,6 +98,11 @@ type PMQuery struct {
 			}
 		}
 	}
+	OrderBy  struct{}
+	Cursor   struct{}
+	Take     struct{}
+	Skip     struct{}
+	Distinct struct{}
 }
 
 type GormQ struct {
