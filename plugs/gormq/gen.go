@@ -37,11 +37,15 @@ type IncludeGen struct {
 }
 
 type WhereGen struct {
-	FieldType WhereFieldType
+	Condition []WhereCondition
+	Next      []WhereGen
+}
+
+type WhereCondition struct {
+	ModelName string
 	Column    string
 	Op        SqlWhereOp
 	Path      []string
-	Next      []WhereGen
 }
 
 func (w WhereGen) Gen() jen.Statement {
@@ -54,8 +58,6 @@ func (w WhereGen) ColumnGen() jen.Statement {
 	codes = append(codes, jen.Id("s").Dot(strings.Join(w.Path, ".")))
 	return codes
 }
-
-func (w WhereGen)
 
 type OrderByGen struct {
 }
