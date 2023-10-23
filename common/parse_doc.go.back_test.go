@@ -24,11 +24,11 @@ asd(fas)dfsa
 fsadfa, sdfsadf
 fasdf"safd
 @say hello work
-@an(/123/456)
-@enum("hello:world","foo:bar","say:if", "hello:fsafsadf", boweian,
+@an("/123/456")
+@enum("hello:world","foo:bar","say:if", "hello:fsafsadf", "boweian",
 "num:1")
 asdfafasdfasdfasd
- @copy("fsdafasf:fdsafas", "fsdfa:fasdfa")
+@copy("fsdafasf:fdsafas", "fsdfa:fasdfa")
 dsafs"dafasdfasd
 asdfsa"dfsadf
 `,

@@ -15,7 +15,7 @@ type FuncMeta struct {
 
 type FuncGoTypeMeta struct {
 	Name    string
-	Doc     *common.Doc
+	Doc     common.Doc
 	Params  []*common.Type
 	Results []*common.Type
 }

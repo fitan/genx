@@ -99,7 +99,7 @@ type InterfaceMetaDate struct {
 
 type InterfaceMethod struct {
 	Name           string
-	Doc            *Doc
+	Doc            Doc
 	Params         MethodParamSlice
 	Results        MethodParamSlice
 	ReturnsError   bool

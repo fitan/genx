@@ -24,7 +24,7 @@ func (s *StructSerialize) Parse(t *types.Struct) (res StructMetaData, err error)
 	return
 }
 
-func (s *StructSerialize) parseType(pre []string, fName string, t types.Type, tag reflect.StructTag, doc *Doc) {
+func (s *StructSerialize) parseType(pre []string, fName string, t types.Type, tag reflect.StructTag, doc Doc) {
 	switch tt := t.(type) {
 	case *types.Named:
 		// 	s.Fields = append(s.Fields, StructFieldMetaData{
@@ -102,7 +102,7 @@ type StructMetaData struct {
 }
 
 type StructFieldMetaData struct {
-	Doc   *Doc
+	Doc   Doc
 	ID    string
 	Tag   reflect.StructTag
 	Xtype *Type

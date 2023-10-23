@@ -15,7 +15,7 @@ type TypeSpecMeta struct {
 }
 
 type TypeSpecGoTypeMeta struct {
-	Doc    *common.Doc
+	Doc    common.Doc
 	Params []string
 	Obj    *ast.TypeSpec
 }

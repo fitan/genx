@@ -16,7 +16,7 @@ type StructMeta struct {
 
 type StructGoTypeMeta struct {
 	Name   string
-	Doc    *common.Doc
+	Doc    common.Doc
 	Params []string
 	Obj    *types.Struct
 }

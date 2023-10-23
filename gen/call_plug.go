@@ -13,7 +13,7 @@ type CallMeta struct {
 
 type CallGoTypeMeta struct {
 	Name    string
-	Doc     *common.Doc
+	Doc     common.Doc
 	Params  []*common.Type
 	Results []*common.Type
 }

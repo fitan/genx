@@ -25,7 +25,7 @@ type Field struct {
 	Path []string
 	Name string
 	Type *common.Type
-	Doc  *common.Doc
+	Doc  common.Doc
 
 	HasMapTag bool
 	MapID     string

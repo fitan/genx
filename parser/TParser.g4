@@ -20,7 +20,7 @@ options {
     tokenVocab=TLexer;
 }
 
-doc: line+;
+doc: line* EOF;
 
 line: func
     | INSET S CLOSE

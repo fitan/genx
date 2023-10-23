@@ -58,6 +58,7 @@ func (d *DocLine) UpFuncName() string {
 }
 
 func ParseDoc(s string) (Doc, error) {
+	fmt.Println("parser doc: ", s)
 	input := antlr.NewInputStream(s)
 	lexer := parser.NewTLexer(input)
 	stream := antlr.NewCommonTokenStream(lexer, 0)

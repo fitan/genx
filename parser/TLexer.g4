@@ -12,13 +12,13 @@ FieldFuncName: ID  ' '+ -> pushMode(OLDFUNC);
 //TEXT : ~[ <>()@,\r\n"]+;
 Comma: ',';
 
-LPAREN    : '(' {fmt.Println(nesting);nesting++;} ;
+LPAREN    : '(' {nesting++;} ;
 
-RPAREN    : ')' {fmt.Println(nesting);nesting--;} ;
+RPAREN    : ')' {nesting--;} ;
 
-IGNORE_NEWLINE
-    :   '\r'? '\n' {nesting>0}? -> skip
-    ;
+//IGNORE_NEWLINE
+//    :   '\r'? '\n' {nesting>0}? -> skip
+//    ;
 
 
 NEWLINE
@@ -28,16 +28,16 @@ NEWLINE
 
 WS: [ \t]+ -> skip ;
 
-INSET: ~'@' {fmt.Println("ent INSIDE")} -> pushMode(INSIDE) ;
+INSET: ~'@'  -> pushMode(INSIDE) ;
 
 mode INSIDE;
 S:   ~[\r\n]+;
-CLOSE : '\r'? '\n' {fmt.Println("out INSIDE")} -> popMode;
+CLOSE : '\r'? '\n' -> popMode;
 //S: . -> more;
 //CLOSE : '\r'? '\n' {fmt.Println("out INSIDE")} -> popMode;
 
 mode OLDFUNC;
-OLDFUNCCLOSE : '\r'? '\n' {fmt.Println("out Fied")} -> popMode;
+OLDFUNCCLOSE : '\r'? '\n' -> popMode;
 FIELD: ~[ \t\r\n]+;
 OLDFUNCWS: [ \t]+ ;
 
