@@ -22,6 +22,22 @@ func (d *Doc) ByFuncName(name string) *DocLine {
 	return nil
 }
 
+func (d *Doc) ByFuncNameAndArgName(funcName, argName string) (string, bool) {
+	if d == nil {
+		return "", false
+	}
+	f := d.ByFuncName(funcName)
+	if f == nil {
+		return "", false
+	}
+	for _, arg := range f.Args {
+		if arg.Name == argName {
+			return arg.Value, true
+		}
+	}
+	return "", false
+}
+
 func (d *Doc) ByFuncNameAndArgs(name string, args ...*string) bool {
 	if d == nil {
 		return false
@@ -32,14 +48,14 @@ func (d *Doc) ByFuncNameAndArgs(name string, args ...*string) bool {
 	}
 	record := make([]string, len(args), len(args))
 	for i, arg := range f.Args {
-		value := arg
-		if strings.HasPrefix(arg, `"`) && strings.HasSuffix(arg, `"`) {
-			value = strings.Trim(arg, `"`)
-		}
-		if strings.HasPrefix(arg, `'`) && strings.HasSuffix(arg, `'`) {
-			value = strings.Trim(arg, `'`)
-		}
-		record[i] = value
+		//value := arg.Value
+		//if strings.HasPrefix(arg.Value, `"`) && strings.HasSuffix(arg.Value, `"`) {
+		//	value = strings.Trim(arg.Value, `"`)
+		//}
+		//if strings.HasPrefix(arg.Value, `'`) && strings.HasSuffix(arg.Value, `'`) {
+		//	value = strings.Trim(arg.Value, `'`)
+		//}
+		record[i] = arg.Value
 	}
 	for i, _ := range args {
 		*args[i] = record[i]
@@ -49,8 +65,8 @@ func (d *Doc) ByFuncNameAndArgs(name string, args ...*string) bool {
 }
 
 type DocLine struct {
-	Name string   `json:"name"`
-	Args []string `json:"args"`
+	Name string           `json:"name"`
+	Args []parser.FuncArg `json:"args"`
 }
 
 func (d *DocLine) UpFuncName() string {
@@ -58,7 +74,6 @@ func (d *DocLine) UpFuncName() string {
 }
 
 func ParseDoc(s string) (Doc, error) {
-	fmt.Println("parser doc: ", s)
 	input := antlr.NewInputStream(s)
 	lexer := parser.NewTLexer(input)
 	stream := antlr.NewCommonTokenStream(lexer, 0)
@@ -80,7 +95,7 @@ func NewTreeShapeListener() *TreeShapeListener {
 	return new(TreeShapeListener)
 }
 
-func (t *TreeShapeListener) EnterFunc(ctx parser.FuncContext) {
+func (t *TreeShapeListener) EnterFunc(ctx *parser.FuncContext) {
 	t.Doc = append(t.Doc, DocLine{
 		Name: ctx.FuncName,
 		Args: ctx.FuncArgs,

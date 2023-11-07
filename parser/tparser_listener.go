@@ -17,6 +17,9 @@ type TParserListener interface {
 	// EnterFunc is called when entering the func production.
 	EnterFunc(c *FuncContext)
 
+	// EnterArgument is called when entering the argument production.
+	EnterArgument(c *ArgumentContext)
+
 	// ExitDoc is called when exiting the doc production.
 	ExitDoc(c *DocContext)
 
@@ -25,4 +28,7 @@ type TParserListener interface {
 
 	// ExitFunc is called when exiting the func production.
 	ExitFunc(c *FuncContext)
+
+	// ExitArgument is called when exiting the argument production.
+	ExitArgument(c *ArgumentContext)
 }

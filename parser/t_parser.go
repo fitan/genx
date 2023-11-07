@@ -35,44 +35,50 @@ var TParserParserStaticData struct {
 func tparserParserInit() {
 	staticData := &TParserParserStaticData
 	staticData.LiteralNames = []string{
-		"", "", "", "", "','", "'('", "')'",
+		"", "", "", "", "", "", "", "'='", "','",
 	}
 	staticData.SymbolicNames = []string{
-		"", "ID", "String", "FieldFuncName", "Comma", "LPAREN", "RPAREN", "NEWLINE",
-		"WS", "INSET", "S", "CLOSE", "OLDFUNCCLOSE", "FIELD", "OLDFUNCWS",
+		"", "ATID", "FieldFuncName", "LPAREN", "NEWLINE", "WS", "INSET", "EQ",
+		"Comma", "PARENWS", "ID", "String", "RPAREN", "S", "CLOSE", "OLDFUNCCLOSE",
+		"OLDFUNCWS", "FIELD",
 	}
 	staticData.RuleNames = []string{
-		"doc", "line", "func",
+		"doc", "line", "func", "argument",
 	}
 	staticData.PredictionContextCache = antlr.NewPredictionContextCache()
 	staticData.serializedATN = []int32{
-		4, 1, 14, 64, 2, 0, 7, 0, 2, 1, 7, 1, 2, 2, 7, 2, 1, 0, 4, 0, 8, 8, 0,
-		11, 0, 12, 0, 9, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-		3, 1, 21, 8, 1, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 5, 2, 31,
-		8, 2, 10, 2, 12, 2, 34, 9, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2,
-		1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 5, 2, 51, 8, 2, 10, 2,
-		12, 2, 54, 9, 2, 3, 2, 56, 8, 2, 1, 2, 3, 2, 59, 8, 2, 1, 2, 3, 2, 62,
-		8, 2, 1, 2, 0, 0, 3, 0, 2, 4, 0, 0, 69, 0, 7, 1, 0, 0, 0, 2, 20, 1, 0,
-		0, 0, 4, 61, 1, 0, 0, 0, 6, 8, 3, 2, 1, 0, 7, 6, 1, 0, 0, 0, 8, 9, 1, 0,
-		0, 0, 9, 7, 1, 0, 0, 0, 9, 10, 1, 0, 0, 0, 10, 11, 1, 0, 0, 0, 11, 12,
-		5, 0, 0, 1, 12, 1, 1, 0, 0, 0, 13, 14, 3, 4, 2, 0, 14, 15, 5, 7, 0, 0,
-		15, 21, 1, 0, 0, 0, 16, 17, 5, 9, 0, 0, 17, 18, 5, 10, 0, 0, 18, 21, 5,
-		11, 0, 0, 19, 21, 5, 7, 0, 0, 20, 13, 1, 0, 0, 0, 20, 16, 1, 0, 0, 0, 20,
-		19, 1, 0, 0, 0, 21, 3, 1, 0, 0, 0, 22, 23, 5, 1, 0, 0, 23, 24, 6, 2, -1,
-		0, 24, 25, 5, 5, 0, 0, 25, 26, 5, 2, 0, 0, 26, 32, 6, 2, -1, 0, 27, 28,
-		5, 4, 0, 0, 28, 29, 5, 2, 0, 0, 29, 31, 6, 2, -1, 0, 30, 27, 1, 0, 0, 0,
-		31, 34, 1, 0, 0, 0, 32, 30, 1, 0, 0, 0, 32, 33, 1, 0, 0, 0, 33, 35, 1,
-		0, 0, 0, 34, 32, 1, 0, 0, 0, 35, 36, 5, 6, 0, 0, 36, 37, 1, 0, 0, 0, 37,
-		62, 5, 7, 0, 0, 38, 39, 5, 1, 0, 0, 39, 40, 6, 2, -1, 0, 40, 41, 5, 5,
-		0, 0, 41, 42, 5, 6, 0, 0, 42, 62, 5, 7, 0, 0, 43, 44, 5, 3, 0, 0, 44, 55,
-		6, 2, -1, 0, 45, 46, 5, 13, 0, 0, 46, 52, 6, 2, -1, 0, 47, 48, 5, 14, 0,
-		0, 48, 49, 5, 13, 0, 0, 49, 51, 6, 2, -1, 0, 50, 47, 1, 0, 0, 0, 51, 54,
-		1, 0, 0, 0, 52, 50, 1, 0, 0, 0, 52, 53, 1, 0, 0, 0, 53, 56, 1, 0, 0, 0,
-		54, 52, 1, 0, 0, 0, 55, 45, 1, 0, 0, 0, 55, 56, 1, 0, 0, 0, 56, 58, 1,
-		0, 0, 0, 57, 59, 5, 14, 0, 0, 58, 57, 1, 0, 0, 0, 58, 59, 1, 0, 0, 0, 59,
-		60, 1, 0, 0, 0, 60, 62, 5, 12, 0, 0, 61, 22, 1, 0, 0, 0, 61, 38, 1, 0,
-		0, 0, 61, 43, 1, 0, 0, 0, 62, 5, 1, 0, 0, 0, 7, 9, 20, 32, 52, 55, 58,
-		61,
+		4, 1, 17, 77, 2, 0, 7, 0, 2, 1, 7, 1, 2, 2, 7, 2, 2, 3, 7, 3, 1, 0, 5,
+		0, 10, 8, 0, 10, 0, 12, 0, 13, 9, 0, 1, 1, 1, 1, 1, 1, 3, 1, 18, 8, 1,
+		1, 1, 1, 1, 3, 1, 22, 8, 1, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1,
+		2, 3, 2, 32, 8, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 3, 2, 40, 8, 2,
+		5, 2, 42, 8, 2, 10, 2, 12, 2, 45, 9, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1,
+		2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 5, 2, 61, 8, 2, 10,
+		2, 12, 2, 64, 9, 2, 3, 2, 66, 8, 2, 1, 2, 1, 2, 3, 2, 70, 8, 2, 1, 3, 1,
+		3, 1, 3, 1, 3, 1, 3, 1, 3, 0, 0, 4, 0, 2, 4, 6, 0, 0, 84, 0, 11, 1, 0,
+		0, 0, 2, 21, 1, 0, 0, 0, 4, 69, 1, 0, 0, 0, 6, 71, 1, 0, 0, 0, 8, 10, 3,
+		2, 1, 0, 9, 8, 1, 0, 0, 0, 10, 13, 1, 0, 0, 0, 11, 9, 1, 0, 0, 0, 11, 12,
+		1, 0, 0, 0, 12, 1, 1, 0, 0, 0, 13, 11, 1, 0, 0, 0, 14, 22, 3, 4, 2, 0,
+		15, 17, 5, 6, 0, 0, 16, 18, 5, 13, 0, 0, 17, 16, 1, 0, 0, 0, 17, 18, 1,
+		0, 0, 0, 18, 19, 1, 0, 0, 0, 19, 22, 5, 14, 0, 0, 20, 22, 5, 4, 0, 0, 21,
+		14, 1, 0, 0, 0, 21, 15, 1, 0, 0, 0, 21, 20, 1, 0, 0, 0, 22, 3, 1, 0, 0,
+		0, 23, 24, 5, 1, 0, 0, 24, 25, 6, 2, -1, 0, 25, 31, 5, 3, 0, 0, 26, 27,
+		5, 11, 0, 0, 27, 32, 6, 2, -1, 0, 28, 29, 3, 6, 3, 0, 29, 30, 6, 2, -1,
+		0, 30, 32, 1, 0, 0, 0, 31, 26, 1, 0, 0, 0, 31, 28, 1, 0, 0, 0, 32, 43,
+		1, 0, 0, 0, 33, 39, 5, 8, 0, 0, 34, 35, 5, 11, 0, 0, 35, 40, 6, 2, -1,
+		0, 36, 37, 3, 6, 3, 0, 37, 38, 6, 2, -1, 0, 38, 40, 1, 0, 0, 0, 39, 34,
+		1, 0, 0, 0, 39, 36, 1, 0, 0, 0, 40, 42, 1, 0, 0, 0, 41, 33, 1, 0, 0, 0,
+		42, 45, 1, 0, 0, 0, 43, 41, 1, 0, 0, 0, 43, 44, 1, 0, 0, 0, 44, 46, 1,
+		0, 0, 0, 45, 43, 1, 0, 0, 0, 46, 47, 5, 12, 0, 0, 47, 48, 1, 0, 0, 0, 48,
+		70, 5, 4, 0, 0, 49, 50, 5, 1, 0, 0, 50, 51, 6, 2, -1, 0, 51, 52, 5, 3,
+		0, 0, 52, 53, 5, 12, 0, 0, 53, 70, 5, 4, 0, 0, 54, 55, 5, 2, 0, 0, 55,
+		65, 6, 2, -1, 0, 56, 57, 5, 17, 0, 0, 57, 62, 6, 2, -1, 0, 58, 59, 5, 17,
+		0, 0, 59, 61, 6, 2, -1, 0, 60, 58, 1, 0, 0, 0, 61, 64, 1, 0, 0, 0, 62,
+		60, 1, 0, 0, 0, 62, 63, 1, 0, 0, 0, 63, 66, 1, 0, 0, 0, 64, 62, 1, 0, 0,
+		0, 65, 56, 1, 0, 0, 0, 65, 66, 1, 0, 0, 0, 66, 67, 1, 0, 0, 0, 67, 70,
+		5, 15, 0, 0, 68, 70, 5, 1, 0, 0, 69, 23, 1, 0, 0, 0, 69, 49, 1, 0, 0, 0,
+		69, 54, 1, 0, 0, 0, 69, 68, 1, 0, 0, 0, 70, 5, 1, 0, 0, 0, 71, 72, 5, 10,
+		0, 0, 72, 73, 5, 7, 0, 0, 73, 74, 5, 11, 0, 0, 74, 75, 6, 3, -1, 0, 75,
+		7, 1, 0, 0, 0, 9, 11, 17, 21, 31, 39, 43, 62, 65, 69,
 	}
 	deserializer := antlr.NewATNDeserializer(nil)
 	staticData.atn = deserializer.Deserialize(staticData.serializedATN)
@@ -121,30 +127,45 @@ func trimQuotation(s string) string {
 	return s
 }
 
+func GenFuncArg(name, value string) (res FuncArg) {
+	res.Name = name
+	res.Value = value
+	return
+}
+
+type FuncArg struct {
+	Name  string
+	Value string
+}
+
 // TParser tokens.
 const (
 	TParserEOF           = antlr.TokenEOF
-	TParserID            = 1
-	TParserString_       = 2
-	TParserFieldFuncName = 3
-	TParserComma         = 4
-	TParserLPAREN        = 5
-	TParserRPAREN        = 6
-	TParserNEWLINE       = 7
-	TParserWS            = 8
-	TParserINSET         = 9
-	TParserS             = 10
-	TParserCLOSE         = 11
-	TParserOLDFUNCCLOSE  = 12
-	TParserFIELD         = 13
-	TParserOLDFUNCWS     = 14
+	TParserATID          = 1
+	TParserFieldFuncName = 2
+	TParserLPAREN        = 3
+	TParserNEWLINE       = 4
+	TParserWS            = 5
+	TParserINSET         = 6
+	TParserEQ            = 7
+	TParserComma         = 8
+	TParserPARENWS       = 9
+	TParserID            = 10
+	TParserString_       = 11
+	TParserRPAREN        = 12
+	TParserS             = 13
+	TParserCLOSE         = 14
+	TParserOLDFUNCCLOSE  = 15
+	TParserOLDFUNCWS     = 16
+	TParserFIELD         = 17
 )
 
 // TParser rules.
 const (
-	TParserRULE_doc  = 0
-	TParserRULE_line = 1
-	TParserRULE_func = 2
+	TParserRULE_doc      = 0
+	TParserRULE_line     = 1
+	TParserRULE_func     = 2
+	TParserRULE_argument = 3
 )
 
 // IDocContext is an interface to support dynamic dispatch.
@@ -155,7 +176,6 @@ type IDocContext interface {
 	GetParser() antlr.Parser
 
 	// Getter signatures
-	EOF() antlr.TerminalNode
 	AllLine() []ILineContext
 	Line(i int) ILineContext
 
@@ -194,10 +214,6 @@ func NewDocContext(parser antlr.Parser, parent antlr.ParserRuleContext, invoking
 }
 
 func (s *DocContext) GetParser() antlr.Parser { return s.parser }
-
-func (s *DocContext) EOF() antlr.TerminalNode {
-	return s.GetToken(TParserEOF, 0)
-}
 
 func (s *DocContext) AllLine() []ILineContext {
 	children := s.GetChildren()
@@ -266,33 +282,25 @@ func (p *TParser) Doc() (localctx IDocContext) {
 	var _la int
 
 	p.EnterOuterAlt(localctx, 1)
-	p.SetState(7)
+	p.SetState(11)
 	p.GetErrorHandler().Sync(p)
 	if p.HasError() {
 		goto errorExit
 	}
 	_la = p.GetTokenStream().LA(1)
 
-	for ok := true; ok; ok = ((int64(_la) & ^0x3f) == 0 && ((int64(1)<<_la)&650) != 0) {
+	for (int64(_la) & ^0x3f) == 0 && ((int64(1)<<_la)&86) != 0 {
 		{
-			p.SetState(6)
+			p.SetState(8)
 			p.Line()
 		}
 
-		p.SetState(9)
+		p.SetState(13)
 		p.GetErrorHandler().Sync(p)
 		if p.HasError() {
 			goto errorExit
 		}
 		_la = p.GetTokenStream().LA(1)
-	}
-	{
-		p.SetState(11)
-		p.Match(TParserEOF)
-		if p.HasError() {
-			// Recognition error - abort rule
-			goto errorExit
-		}
 	}
 
 errorExit:
@@ -317,10 +325,10 @@ type ILineContext interface {
 
 	// Getter signatures
 	Func_() IFuncContext
-	NEWLINE() antlr.TerminalNode
 	INSET() antlr.TerminalNode
-	S() antlr.TerminalNode
 	CLOSE() antlr.TerminalNode
+	S() antlr.TerminalNode
+	NEWLINE() antlr.TerminalNode
 
 	// IsLineContext differentiates from other interfaces.
 	IsLineContext()
@@ -374,20 +382,20 @@ func (s *LineContext) Func_() IFuncContext {
 	return t.(IFuncContext)
 }
 
-func (s *LineContext) NEWLINE() antlr.TerminalNode {
-	return s.GetToken(TParserNEWLINE, 0)
-}
-
 func (s *LineContext) INSET() antlr.TerminalNode {
 	return s.GetToken(TParserINSET, 0)
+}
+
+func (s *LineContext) CLOSE() antlr.TerminalNode {
+	return s.GetToken(TParserCLOSE, 0)
 }
 
 func (s *LineContext) S() antlr.TerminalNode {
 	return s.GetToken(TParserS, 0)
 }
 
-func (s *LineContext) CLOSE() antlr.TerminalNode {
-	return s.GetToken(TParserCLOSE, 0)
+func (s *LineContext) NEWLINE() antlr.TerminalNode {
+	return s.GetToken(TParserNEWLINE, 0)
 }
 
 func (s *LineContext) GetRuleContext() antlr.RuleContext {
@@ -413,48 +421,52 @@ func (s *LineContext) ExitRule(listener antlr.ParseTreeListener) {
 func (p *TParser) Line() (localctx ILineContext) {
 	localctx = NewLineContext(p, p.GetParserRuleContext(), p.GetState())
 	p.EnterRule(localctx, 2, TParserRULE_line)
-	p.SetState(20)
+	var _la int
+
+	p.SetState(21)
 	p.GetErrorHandler().Sync(p)
 	if p.HasError() {
 		goto errorExit
 	}
 
 	switch p.GetTokenStream().LA(1) {
-	case TParserID, TParserFieldFuncName:
+	case TParserATID, TParserFieldFuncName:
 		p.EnterOuterAlt(localctx, 1)
 		{
-			p.SetState(13)
-			p.Func_()
-		}
-		{
 			p.SetState(14)
-			p.Match(TParserNEWLINE)
-			if p.HasError() {
-				// Recognition error - abort rule
-				goto errorExit
-			}
+			p.Func_()
 		}
 
 	case TParserINSET:
 		p.EnterOuterAlt(localctx, 2)
 		{
-			p.SetState(16)
+			p.SetState(15)
 			p.Match(TParserINSET)
 			if p.HasError() {
 				// Recognition error - abort rule
 				goto errorExit
 			}
 		}
-		{
-			p.SetState(17)
-			p.Match(TParserS)
-			if p.HasError() {
-				// Recognition error - abort rule
-				goto errorExit
+		p.SetState(17)
+		p.GetErrorHandler().Sync(p)
+		if p.HasError() {
+			goto errorExit
+		}
+		_la = p.GetTokenStream().LA(1)
+
+		if _la == TParserS {
+			{
+				p.SetState(16)
+				p.Match(TParserS)
+				if p.HasError() {
+					// Recognition error - abort rule
+					goto errorExit
+				}
 			}
+
 		}
 		{
-			p.SetState(18)
+			p.SetState(19)
 			p.Match(TParserCLOSE)
 			if p.HasError() {
 				// Recognition error - abort rule
@@ -465,7 +477,7 @@ func (p *TParser) Line() (localctx ILineContext) {
 	case TParserNEWLINE:
 		p.EnterOuterAlt(localctx, 3)
 		{
-			p.SetState(19)
+			p.SetState(20)
 			p.Match(TParserNEWLINE)
 			if p.HasError() {
 				// Recognition error - abort rule
@@ -498,8 +510,8 @@ type IFuncContext interface {
 	// GetParser returns the parser.
 	GetParser() antlr.Parser
 
-	// Get_ID returns the _ID token.
-	Get_ID() antlr.Token
+	// Get_ATID returns the _ATID token.
+	Get_ATID() antlr.Token
 
 	// Get_String_ returns the _String_ token.
 	Get_String_() antlr.Token
@@ -510,8 +522,8 @@ type IFuncContext interface {
 	// Get_FIELD returns the _FIELD token.
 	Get_FIELD() antlr.Token
 
-	// Set_ID sets the _ID token.
-	Set_ID(antlr.Token)
+	// Set_ATID sets the _ATID token.
+	Set_ATID(antlr.Token)
 
 	// Set_String_ sets the _String_ token.
 	Set_String_(antlr.Token)
@@ -522,33 +534,39 @@ type IFuncContext interface {
 	// Set_FIELD sets the _FIELD token.
 	Set_FIELD(antlr.Token)
 
+	// Get_argument returns the _argument rule contexts.
+	Get_argument() IArgumentContext
+
+	// Set_argument sets the _argument rule contexts.
+	Set_argument(IArgumentContext)
+
 	// GetFuncArgs returns the FuncArgs attribute.
-	GetFuncArgs() []string
+	GetFuncArgs() []FuncArg
 
 	// GetFuncName returns the FuncName attribute.
 	GetFuncName() string
 
 	// SetFuncArgs sets the FuncArgs attribute.
-	SetFuncArgs([]string)
+	SetFuncArgs([]FuncArg)
 
 	// SetFuncName sets the FuncName attribute.
 	SetFuncName(string)
 
 	// Getter signatures
-	ID() antlr.TerminalNode
+	ATID() antlr.TerminalNode
 	NEWLINE() antlr.TerminalNode
 	LPAREN() antlr.TerminalNode
+	RPAREN() antlr.TerminalNode
 	AllString_() []antlr.TerminalNode
 	String_(i int) antlr.TerminalNode
-	RPAREN() antlr.TerminalNode
+	AllArgument() []IArgumentContext
+	Argument(i int) IArgumentContext
 	AllComma() []antlr.TerminalNode
 	Comma(i int) antlr.TerminalNode
 	FieldFuncName() antlr.TerminalNode
 	OLDFUNCCLOSE() antlr.TerminalNode
 	AllFIELD() []antlr.TerminalNode
 	FIELD(i int) antlr.TerminalNode
-	AllOLDFUNCWS() []antlr.TerminalNode
-	OLDFUNCWS(i int) antlr.TerminalNode
 
 	// IsFuncContext differentiates from other interfaces.
 	IsFuncContext()
@@ -557,10 +575,11 @@ type IFuncContext interface {
 type FuncContext struct {
 	antlr.BaseParserRuleContext
 	parser         antlr.Parser
-	FuncArgs       []string
+	FuncArgs       []FuncArg
 	FuncName       string
-	_ID            antlr.Token
+	_ATID          antlr.Token
 	_String_       antlr.Token
+	_argument      IArgumentContext
 	_FieldFuncName antlr.Token
 	_FIELD         antlr.Token
 }
@@ -592,7 +611,7 @@ func NewFuncContext(parser antlr.Parser, parent antlr.ParserRuleContext, invokin
 
 func (s *FuncContext) GetParser() antlr.Parser { return s.parser }
 
-func (s *FuncContext) Get_ID() antlr.Token { return s._ID }
+func (s *FuncContext) Get_ATID() antlr.Token { return s._ATID }
 
 func (s *FuncContext) Get_String_() antlr.Token { return s._String_ }
 
@@ -600,7 +619,7 @@ func (s *FuncContext) Get_FieldFuncName() antlr.Token { return s._FieldFuncName 
 
 func (s *FuncContext) Get_FIELD() antlr.Token { return s._FIELD }
 
-func (s *FuncContext) Set_ID(v antlr.Token) { s._ID = v }
+func (s *FuncContext) Set_ATID(v antlr.Token) { s._ATID = v }
 
 func (s *FuncContext) Set_String_(v antlr.Token) { s._String_ = v }
 
@@ -608,16 +627,20 @@ func (s *FuncContext) Set_FieldFuncName(v antlr.Token) { s._FieldFuncName = v }
 
 func (s *FuncContext) Set_FIELD(v antlr.Token) { s._FIELD = v }
 
-func (s *FuncContext) GetFuncArgs() []string { return s.FuncArgs }
+func (s *FuncContext) Get_argument() IArgumentContext { return s._argument }
+
+func (s *FuncContext) Set_argument(v IArgumentContext) { s._argument = v }
+
+func (s *FuncContext) GetFuncArgs() []FuncArg { return s.FuncArgs }
 
 func (s *FuncContext) GetFuncName() string { return s.FuncName }
 
-func (s *FuncContext) SetFuncArgs(v []string) { s.FuncArgs = v }
+func (s *FuncContext) SetFuncArgs(v []FuncArg) { s.FuncArgs = v }
 
 func (s *FuncContext) SetFuncName(v string) { s.FuncName = v }
 
-func (s *FuncContext) ID() antlr.TerminalNode {
-	return s.GetToken(TParserID, 0)
+func (s *FuncContext) ATID() antlr.TerminalNode {
+	return s.GetToken(TParserATID, 0)
 }
 
 func (s *FuncContext) NEWLINE() antlr.TerminalNode {
@@ -628,6 +651,10 @@ func (s *FuncContext) LPAREN() antlr.TerminalNode {
 	return s.GetToken(TParserLPAREN, 0)
 }
 
+func (s *FuncContext) RPAREN() antlr.TerminalNode {
+	return s.GetToken(TParserRPAREN, 0)
+}
+
 func (s *FuncContext) AllString_() []antlr.TerminalNode {
 	return s.GetTokens(TParserString_)
 }
@@ -636,8 +663,45 @@ func (s *FuncContext) String_(i int) antlr.TerminalNode {
 	return s.GetToken(TParserString_, i)
 }
 
-func (s *FuncContext) RPAREN() antlr.TerminalNode {
-	return s.GetToken(TParserRPAREN, 0)
+func (s *FuncContext) AllArgument() []IArgumentContext {
+	children := s.GetChildren()
+	len := 0
+	for _, ctx := range children {
+		if _, ok := ctx.(IArgumentContext); ok {
+			len++
+		}
+	}
+
+	tst := make([]IArgumentContext, len)
+	i := 0
+	for _, ctx := range children {
+		if t, ok := ctx.(IArgumentContext); ok {
+			tst[i] = t.(IArgumentContext)
+			i++
+		}
+	}
+
+	return tst
+}
+
+func (s *FuncContext) Argument(i int) IArgumentContext {
+	var t antlr.RuleContext
+	j := 0
+	for _, ctx := range s.GetChildren() {
+		if _, ok := ctx.(IArgumentContext); ok {
+			if j == i {
+				t = ctx.(antlr.RuleContext)
+				break
+			}
+			j++
+		}
+	}
+
+	if t == nil {
+		return nil
+	}
+
+	return t.(IArgumentContext)
 }
 
 func (s *FuncContext) AllComma() []antlr.TerminalNode {
@@ -662,14 +726,6 @@ func (s *FuncContext) AllFIELD() []antlr.TerminalNode {
 
 func (s *FuncContext) FIELD(i int) antlr.TerminalNode {
 	return s.GetToken(TParserFIELD, i)
-}
-
-func (s *FuncContext) AllOLDFUNCWS() []antlr.TerminalNode {
-	return s.GetTokens(TParserOLDFUNCWS)
-}
-
-func (s *FuncContext) OLDFUNCWS(i int) antlr.TerminalNode {
-	return s.GetToken(TParserOLDFUNCWS, i)
 }
 
 func (s *FuncContext) GetRuleContext() antlr.RuleContext {
@@ -697,80 +753,52 @@ func (p *TParser) Func_() (localctx IFuncContext) {
 	p.EnterRule(localctx, 4, TParserRULE_func)
 	var _la int
 
-	var _alt int
-
-	p.SetState(61)
+	p.SetState(69)
 	p.GetErrorHandler().Sync(p)
 	if p.HasError() {
 		goto errorExit
 	}
 
-	switch p.GetInterpreter().AdaptivePredict(p.BaseParser, p.GetTokenStream(), 6, p.GetParserRuleContext()) {
+	switch p.GetInterpreter().AdaptivePredict(p.BaseParser, p.GetTokenStream(), 8, p.GetParserRuleContext()) {
 	case 1:
 		p.EnterOuterAlt(localctx, 1)
 		{
-			p.SetState(22)
+			p.SetState(23)
 
-			var _m = p.Match(TParserID)
+			var _m = p.Match(TParserATID)
 
-			localctx.(*FuncContext)._ID = _m
+			localctx.(*FuncContext)._ATID = _m
 			if p.HasError() {
 				// Recognition error - abort rule
 				goto errorExit
 			}
 		}
 		localctx.(*FuncContext).FuncName = (func() string {
-			if localctx.(*FuncContext).Get_ID() == nil {
+			if localctx.(*FuncContext).Get_ATID() == nil {
 				return ""
 			} else {
-				return localctx.(*FuncContext).Get_ID().GetText()
+				return localctx.(*FuncContext).Get_ATID().GetText()
 			}
 		}())
 
 		{
-			p.SetState(24)
+			p.SetState(25)
 			p.Match(TParserLPAREN)
 			if p.HasError() {
 				// Recognition error - abort rule
 				goto errorExit
 			}
 		}
-		{
-			p.SetState(25)
-
-			var _m = p.Match(TParserString_)
-
-			localctx.(*FuncContext)._String_ = _m
-			if p.HasError() {
-				// Recognition error - abort rule
-				goto errorExit
-			}
-		}
-		localctx.(*FuncContext).FuncArgs = append(localctx.(*FuncContext).FuncArgs, trimQuotation((func() string {
-			if localctx.(*FuncContext).Get_String_() == nil {
-				return ""
-			} else {
-				return localctx.(*FuncContext).Get_String_().GetText()
-			}
-		}())))
-		p.SetState(32)
+		p.SetState(31)
 		p.GetErrorHandler().Sync(p)
 		if p.HasError() {
 			goto errorExit
 		}
-		_la = p.GetTokenStream().LA(1)
 
-		for _la == TParserComma {
+		switch p.GetTokenStream().LA(1) {
+		case TParserString_:
 			{
-				p.SetState(27)
-				p.Match(TParserComma)
-				if p.HasError() {
-					// Recognition error - abort rule
-					goto errorExit
-				}
-			}
-			{
-				p.SetState(28)
+				p.SetState(26)
 
 				var _m = p.Match(TParserString_)
 
@@ -780,15 +808,87 @@ func (p *TParser) Func_() (localctx IFuncContext) {
 					goto errorExit
 				}
 			}
-			localctx.(*FuncContext).FuncArgs = append(localctx.(*FuncContext).FuncArgs, trimQuotation((func() string {
+			localctx.(*FuncContext).FuncArgs = append(localctx.(*FuncContext).FuncArgs, GenFuncArg("", trimQuotation((func() string {
 				if localctx.(*FuncContext).Get_String_() == nil {
 					return ""
 				} else {
 					return localctx.(*FuncContext).Get_String_().GetText()
 				}
-			}())))
+			}()))))
 
-			p.SetState(34)
+		case TParserID:
+			{
+				p.SetState(28)
+
+				var _x = p.Argument()
+
+				localctx.(*FuncContext)._argument = _x
+			}
+			localctx.(*FuncContext).FuncArgs = append(localctx.(*FuncContext).FuncArgs, localctx.(*FuncContext).Get_argument().GetRes())
+
+		default:
+			p.SetError(antlr.NewNoViableAltException(p, nil, nil, nil, nil, nil))
+			goto errorExit
+		}
+		p.SetState(43)
+		p.GetErrorHandler().Sync(p)
+		if p.HasError() {
+			goto errorExit
+		}
+		_la = p.GetTokenStream().LA(1)
+
+		for _la == TParserComma {
+			{
+				p.SetState(33)
+				p.Match(TParserComma)
+				if p.HasError() {
+					// Recognition error - abort rule
+					goto errorExit
+				}
+			}
+			p.SetState(39)
+			p.GetErrorHandler().Sync(p)
+			if p.HasError() {
+				goto errorExit
+			}
+
+			switch p.GetTokenStream().LA(1) {
+			case TParserString_:
+				{
+					p.SetState(34)
+
+					var _m = p.Match(TParserString_)
+
+					localctx.(*FuncContext)._String_ = _m
+					if p.HasError() {
+						// Recognition error - abort rule
+						goto errorExit
+					}
+				}
+				localctx.(*FuncContext).FuncArgs = append(localctx.(*FuncContext).FuncArgs, GenFuncArg("", trimQuotation((func() string {
+					if localctx.(*FuncContext).Get_String_() == nil {
+						return ""
+					} else {
+						return localctx.(*FuncContext).Get_String_().GetText()
+					}
+				}()))))
+
+			case TParserID:
+				{
+					p.SetState(36)
+
+					var _x = p.Argument()
+
+					localctx.(*FuncContext)._argument = _x
+				}
+				localctx.(*FuncContext).FuncArgs = append(localctx.(*FuncContext).FuncArgs, localctx.(*FuncContext).Get_argument().GetRes())
+
+			default:
+				p.SetError(antlr.NewNoViableAltException(p, nil, nil, nil, nil, nil))
+				goto errorExit
+			}
+
+			p.SetState(45)
 			p.GetErrorHandler().Sync(p)
 			if p.HasError() {
 				goto errorExit
@@ -796,7 +896,7 @@ func (p *TParser) Func_() (localctx IFuncContext) {
 			_la = p.GetTokenStream().LA(1)
 		}
 		{
-			p.SetState(35)
+			p.SetState(46)
 			p.Match(TParserRPAREN)
 			if p.HasError() {
 				// Recognition error - abort rule
@@ -805,7 +905,7 @@ func (p *TParser) Func_() (localctx IFuncContext) {
 		}
 
 		{
-			p.SetState(37)
+			p.SetState(48)
 			p.Match(TParserNEWLINE)
 			if p.HasError() {
 				// Recognition error - abort rule
@@ -816,25 +916,25 @@ func (p *TParser) Func_() (localctx IFuncContext) {
 	case 2:
 		p.EnterOuterAlt(localctx, 2)
 		{
-			p.SetState(38)
+			p.SetState(49)
 
-			var _m = p.Match(TParserID)
+			var _m = p.Match(TParserATID)
 
-			localctx.(*FuncContext)._ID = _m
+			localctx.(*FuncContext)._ATID = _m
 			if p.HasError() {
 				// Recognition error - abort rule
 				goto errorExit
 			}
 		}
 		localctx.(*FuncContext).FuncName = (func() string {
-			if localctx.(*FuncContext).Get_ID() == nil {
+			if localctx.(*FuncContext).Get_ATID() == nil {
 				return ""
 			} else {
-				return localctx.(*FuncContext).Get_ID().GetText()
+				return localctx.(*FuncContext).Get_ATID().GetText()
 			}
 		}())
 		{
-			p.SetState(40)
+			p.SetState(51)
 			p.Match(TParserLPAREN)
 			if p.HasError() {
 				// Recognition error - abort rule
@@ -842,7 +942,7 @@ func (p *TParser) Func_() (localctx IFuncContext) {
 			}
 		}
 		{
-			p.SetState(41)
+			p.SetState(52)
 			p.Match(TParserRPAREN)
 			if p.HasError() {
 				// Recognition error - abort rule
@@ -850,7 +950,7 @@ func (p *TParser) Func_() (localctx IFuncContext) {
 			}
 		}
 		{
-			p.SetState(42)
+			p.SetState(53)
 			p.Match(TParserNEWLINE)
 			if p.HasError() {
 				// Recognition error - abort rule
@@ -861,7 +961,7 @@ func (p *TParser) Func_() (localctx IFuncContext) {
 	case 3:
 		p.EnterOuterAlt(localctx, 3)
 		{
-			p.SetState(43)
+			p.SetState(54)
 
 			var _m = p.Match(TParserFieldFuncName)
 
@@ -878,7 +978,7 @@ func (p *TParser) Func_() (localctx IFuncContext) {
 				return localctx.(*FuncContext).Get_FieldFuncName().GetText()
 			}
 		}()))
-		p.SetState(55)
+		p.SetState(65)
 		p.GetErrorHandler().Sync(p)
 		if p.HasError() {
 			goto errorExit
@@ -887,7 +987,7 @@ func (p *TParser) Func_() (localctx IFuncContext) {
 
 		if _la == TParserFIELD {
 			{
-				p.SetState(45)
+				p.SetState(56)
 
 				var _m = p.Match(TParserFIELD)
 
@@ -897,85 +997,63 @@ func (p *TParser) Func_() (localctx IFuncContext) {
 					goto errorExit
 				}
 			}
-			localctx.(*FuncContext).FuncArgs = append(localctx.(*FuncContext).FuncArgs, (func() string {
+			localctx.(*FuncContext).FuncArgs = append(localctx.(*FuncContext).FuncArgs, GenFuncArg("", (func() string {
 				if localctx.(*FuncContext).Get_FIELD() == nil {
 					return ""
 				} else {
 					return localctx.(*FuncContext).Get_FIELD().GetText()
 				}
-			}()))
-			p.SetState(52)
+			}())))
+			p.SetState(62)
 			p.GetErrorHandler().Sync(p)
 			if p.HasError() {
 				goto errorExit
 			}
-			_alt = p.GetInterpreter().AdaptivePredict(p.BaseParser, p.GetTokenStream(), 3, p.GetParserRuleContext())
-			if p.HasError() {
-				goto errorExit
-			}
-			for _alt != 2 && _alt != antlr.ATNInvalidAltNumber {
-				if _alt == 1 {
-					{
-						p.SetState(47)
-						p.Match(TParserOLDFUNCWS)
-						if p.HasError() {
-							// Recognition error - abort rule
-							goto errorExit
-						}
+			_la = p.GetTokenStream().LA(1)
+
+			for _la == TParserFIELD {
+				{
+					p.SetState(58)
+
+					var _m = p.Match(TParserFIELD)
+
+					localctx.(*FuncContext)._FIELD = _m
+					if p.HasError() {
+						// Recognition error - abort rule
+						goto errorExit
 					}
-					{
-						p.SetState(48)
-
-						var _m = p.Match(TParserFIELD)
-
-						localctx.(*FuncContext)._FIELD = _m
-						if p.HasError() {
-							// Recognition error - abort rule
-							goto errorExit
-						}
-					}
-					localctx.(*FuncContext).FuncArgs = append(localctx.(*FuncContext).FuncArgs, (func() string {
-						if localctx.(*FuncContext).Get_FIELD() == nil {
-							return ""
-						} else {
-							return localctx.(*FuncContext).Get_FIELD().GetText()
-						}
-					}()))
-
 				}
-				p.SetState(54)
+				localctx.(*FuncContext).FuncArgs = append(localctx.(*FuncContext).FuncArgs, GenFuncArg("", (func() string {
+					if localctx.(*FuncContext).Get_FIELD() == nil {
+						return ""
+					} else {
+						return localctx.(*FuncContext).Get_FIELD().GetText()
+					}
+				}())))
+
+				p.SetState(64)
 				p.GetErrorHandler().Sync(p)
 				if p.HasError() {
 					goto errorExit
 				}
-				_alt = p.GetInterpreter().AdaptivePredict(p.BaseParser, p.GetTokenStream(), 3, p.GetParserRuleContext())
-				if p.HasError() {
-					goto errorExit
-				}
-			}
-
-		}
-		p.SetState(58)
-		p.GetErrorHandler().Sync(p)
-		if p.HasError() {
-			goto errorExit
-		}
-		_la = p.GetTokenStream().LA(1)
-
-		if _la == TParserOLDFUNCWS {
-			{
-				p.SetState(57)
-				p.Match(TParserOLDFUNCWS)
-				if p.HasError() {
-					// Recognition error - abort rule
-					goto errorExit
-				}
+				_la = p.GetTokenStream().LA(1)
 			}
 
 		}
 		{
-			p.SetState(60)
+			p.SetState(67)
 			p.Match(TParserOLDFUNCCLOSE)
+			if p.HasError() {
+				// Recognition error - abort rule
+				goto errorExit
+			}
+		}
+
+	case 4:
+		p.EnterOuterAlt(localctx, 4)
+		{
+			p.SetState(68)
+			p.Match(TParserATID)
 			if p.HasError() {
 				// Recognition error - abort rule
 				goto errorExit
@@ -985,6 +1063,181 @@ func (p *TParser) Func_() (localctx IFuncContext) {
 	case antlr.ATNInvalidAltNumber:
 		goto errorExit
 	}
+
+errorExit:
+	if p.HasError() {
+		v := p.GetError()
+		localctx.SetException(v)
+		p.GetErrorHandler().ReportError(p, v)
+		p.GetErrorHandler().Recover(p, v)
+		p.SetError(nil)
+	}
+	p.ExitRule()
+	return localctx
+	goto errorExit // Trick to prevent compiler error if the label is not used
+}
+
+// IArgumentContext is an interface to support dynamic dispatch.
+type IArgumentContext interface {
+	antlr.ParserRuleContext
+
+	// GetParser returns the parser.
+	GetParser() antlr.Parser
+
+	// Get_ID returns the _ID token.
+	Get_ID() antlr.Token
+
+	// Get_String_ returns the _String_ token.
+	Get_String_() antlr.Token
+
+	// Set_ID sets the _ID token.
+	Set_ID(antlr.Token)
+
+	// Set_String_ sets the _String_ token.
+	Set_String_(antlr.Token)
+
+	// GetRes returns the res attribute.
+	GetRes() FuncArg
+
+	// SetRes sets the res attribute.
+	SetRes(FuncArg)
+
+	// Getter signatures
+	ID() antlr.TerminalNode
+	EQ() antlr.TerminalNode
+	String_() antlr.TerminalNode
+
+	// IsArgumentContext differentiates from other interfaces.
+	IsArgumentContext()
+}
+
+type ArgumentContext struct {
+	antlr.BaseParserRuleContext
+	parser   antlr.Parser
+	res      FuncArg
+	_ID      antlr.Token
+	_String_ antlr.Token
+}
+
+func NewEmptyArgumentContext() *ArgumentContext {
+	var p = new(ArgumentContext)
+	antlr.InitBaseParserRuleContext(&p.BaseParserRuleContext, nil, -1)
+	p.RuleIndex = TParserRULE_argument
+	return p
+}
+
+func InitEmptyArgumentContext(p *ArgumentContext) {
+	antlr.InitBaseParserRuleContext(&p.BaseParserRuleContext, nil, -1)
+	p.RuleIndex = TParserRULE_argument
+}
+
+func (*ArgumentContext) IsArgumentContext() {}
+
+func NewArgumentContext(parser antlr.Parser, parent antlr.ParserRuleContext, invokingState int) *ArgumentContext {
+	var p = new(ArgumentContext)
+
+	antlr.InitBaseParserRuleContext(&p.BaseParserRuleContext, parent, invokingState)
+
+	p.parser = parser
+	p.RuleIndex = TParserRULE_argument
+
+	return p
+}
+
+func (s *ArgumentContext) GetParser() antlr.Parser { return s.parser }
+
+func (s *ArgumentContext) Get_ID() antlr.Token { return s._ID }
+
+func (s *ArgumentContext) Get_String_() antlr.Token { return s._String_ }
+
+func (s *ArgumentContext) Set_ID(v antlr.Token) { s._ID = v }
+
+func (s *ArgumentContext) Set_String_(v antlr.Token) { s._String_ = v }
+
+func (s *ArgumentContext) GetRes() FuncArg { return s.res }
+
+func (s *ArgumentContext) SetRes(v FuncArg) { s.res = v }
+
+func (s *ArgumentContext) ID() antlr.TerminalNode {
+	return s.GetToken(TParserID, 0)
+}
+
+func (s *ArgumentContext) EQ() antlr.TerminalNode {
+	return s.GetToken(TParserEQ, 0)
+}
+
+func (s *ArgumentContext) String_() antlr.TerminalNode {
+	return s.GetToken(TParserString_, 0)
+}
+
+func (s *ArgumentContext) GetRuleContext() antlr.RuleContext {
+	return s
+}
+
+func (s *ArgumentContext) ToStringTree(ruleNames []string, recog antlr.Recognizer) string {
+	return antlr.TreesStringTree(s, ruleNames, recog)
+}
+
+func (s *ArgumentContext) EnterRule(listener antlr.ParseTreeListener) {
+	if listenerT, ok := listener.(TParserListener); ok {
+		listenerT.EnterArgument(s)
+	}
+}
+
+func (s *ArgumentContext) ExitRule(listener antlr.ParseTreeListener) {
+	if listenerT, ok := listener.(TParserListener); ok {
+		listenerT.ExitArgument(s)
+	}
+}
+
+func (p *TParser) Argument() (localctx IArgumentContext) {
+	localctx = NewArgumentContext(p, p.GetParserRuleContext(), p.GetState())
+	p.EnterRule(localctx, 6, TParserRULE_argument)
+	p.EnterOuterAlt(localctx, 1)
+	{
+		p.SetState(71)
+
+		var _m = p.Match(TParserID)
+
+		localctx.(*ArgumentContext)._ID = _m
+		if p.HasError() {
+			// Recognition error - abort rule
+			goto errorExit
+		}
+	}
+	{
+		p.SetState(72)
+		p.Match(TParserEQ)
+		if p.HasError() {
+			// Recognition error - abort rule
+			goto errorExit
+		}
+	}
+	{
+		p.SetState(73)
+
+		var _m = p.Match(TParserString_)
+
+		localctx.(*ArgumentContext)._String_ = _m
+		if p.HasError() {
+			// Recognition error - abort rule
+			goto errorExit
+		}
+	}
+
+	localctx.(*ArgumentContext).SetRes(GenFuncArg((func() string {
+		if localctx.(*ArgumentContext).Get_ID() == nil {
+			return ""
+		} else {
+			return localctx.(*ArgumentContext).Get_ID().GetText()
+		}
+	}()), trimQuotation((func() string {
+		if localctx.(*ArgumentContext).Get_String_() == nil {
+			return ""
+		} else {
+			return localctx.(*ArgumentContext).Get_String_().GetText()
+		}
+	}()))))
 
 errorExit:
 	if p.HasError() {

@@ -2,13 +2,14 @@ package enum
 
 import (
 	"fmt"
+	"github.com/fitan/genx/parser"
 	"github.com/fitan/jennifer/jen"
 	"strconv"
 	"strings"
 )
 
 type Enum struct {
-	Param    []string
+	Param    []parser.FuncArg
 	Args     []Arg
 	TypeName string
 }
@@ -55,10 +56,8 @@ func (e *Enum) Init() (err error) {
 
 	args := make([]Arg, 0, 0)
 	for _, arg := range e.Param {
-		arg = strings.TrimPrefix(arg, `"`)
-		arg = strings.TrimSuffix(arg, `"`)
 
-		argSplit := strings.Split(arg, ":")
+		argSplit := strings.Split(arg.Value, ":")
 		var key, value string
 		if len(argSplit) == 1 {
 			key = argSplit[1]

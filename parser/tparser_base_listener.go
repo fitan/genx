@@ -38,3 +38,9 @@ func (s *BaseTParserListener) EnterFunc(ctx *FuncContext) {}
 
 // ExitFunc is called when production func is exited.
 func (s *BaseTParserListener) ExitFunc(ctx *FuncContext) {}
+
+// EnterArgument is called when production argument is entered.
+func (s *BaseTParserListener) EnterArgument(ctx *ArgumentContext) {}
+
+// ExitArgument is called when production argument is exited.
+func (s *BaseTParserListener) ExitArgument(ctx *ArgumentContext) {}

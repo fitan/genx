@@ -2,6 +2,7 @@ package common
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"testing"
 )
@@ -24,9 +25,13 @@ asd(fas)dfsa
 fsadfa, sdfsadf
 fasdf"safd
 @say hello work
-@an("/123/456")
+@an("/123/456", name="an")
 @enum("hello:world","foo:bar","say:if", "hello:fsafsadf", "boweian",
-"num:1")
+"num:1",
+"say:1234",
+method="enum")
+{
+}
 asdfafasdfasdfasd
 @copy("fsdafasf:fdsafas", "fsdfa:fasdfa")
 dsafs"dafasdfasd
@@ -52,6 +57,7 @@ asdfsa"dfsadf
 				t.Errorf("ParseDoc() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+			fmt.Println(got)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ParseDoc() got = %v, want %v", got, tt.want)
 				b, _ := json.Marshal(got)

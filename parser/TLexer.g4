@@ -5,39 +5,45 @@ lexer grammar TLexer;
 }
 
 
-ID: '@' [a-zA-Z_][a-zA-Z0-9_]*;
-String:  ( '\'' ('\'\''|~'\'')* '\'' ) | ( '"' ('""'|~'"')* '"' );
+ATID: '@' [a-zA-Z_][a-zA-Z0-9_]*;
 
-FieldFuncName: ID  ' '+ -> pushMode(OLDFUNC);
+
+FieldFuncName: ATID  ' '+ -> pushMode(OLDFUNC);
 //TEXT : ~[ <>()@,\r\n"]+;
-Comma: ',';
 
-LPAREN    : '(' {nesting++;} ;
+LPAREN    : '(' {nesting++;} -> pushMode(PAREN) ;
 
-RPAREN    : ')' {nesting--;} ;
-
+//
 //IGNORE_NEWLINE
 //    :   '\r'? '\n' {nesting>0}? -> skip
 //    ;
-
+//
 
 NEWLINE
-   :    '\r'? '\n'
+   :    ('\r'? '\n') | EOF
    ;
+
 
 
 WS: [ \t]+ -> skip ;
 
-INSET: ~'@'  -> pushMode(INSIDE) ;
+INSET: ~'@' -> pushMode(INSIDE) ;
+
+mode PAREN;
+EQ: '=';
+Comma: ',';
+PARENWS: [ \t]+ -> skip;
+ID: [a-zA-Z_][a-zA-Z0-9_]*;
+String:  ( '\'' ('\'\''|~'\'')* '\'' ) | ( '"' ('""'|~'"')* '"' );
+RPAREN: ')' {nesting--;} -> popMode;
+
 
 mode INSIDE;
 S:   ~[\r\n]+;
-CLOSE : '\r'? '\n' -> popMode;
-//S: . -> more;
-//CLOSE : '\r'? '\n' {fmt.Println("out INSIDE")} -> popMode;
+CLOSE : (('\r'? '\n') | EOF) -> popMode;
 
 mode OLDFUNC;
-OLDFUNCCLOSE : '\r'? '\n' -> popMode;
-FIELD: ~[ \t\r\n]+;
-OLDFUNCWS: [ \t]+ ;
+OLDFUNCCLOSE : (('\r'? '\n') | EOF) -> popMode;
+OLDFUNCWS: [ \t]+ -> skip ;
+FIELD: ( '\'' ('\'\''|~'\'')* '\'' ) | ( '"' ('""'|~'"')* '"' ) | ~[ \t\r\n]+;
 

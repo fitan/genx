@@ -85,7 +85,8 @@ func (x *X) parse() {
 
 				doc, err := common.ParseDoc(callDoc.Text())
 				if err != nil {
-					slog.Error("parse doc error", err, slog.String("doc", callDoc.Text()))
+					position := x.Option.Pkg.Fset.Position(t.Pos())
+					slog.Error("parse doc error", "err", err, "fileName", position.Filename, "line", position.Line)
 					panic(err)
 				}
 
