@@ -440,7 +440,6 @@ func (d *Copy) GenMap() jen.Statement {
 		if !v.Type.MapValue.Basic {
 			srcMapValue := srcV.Type.MapValue
 			destMapValue := v.Type.MapValue
-			fmt.Println("mapValue", srcMapValue.TypeAsJen().GoString())
 			//srcName := destMapValue.HashID(d.SumPath())
 			//destName := destMapValue.HashID(d.SumPath())
 			srcName := srcV.FieldName(d.SumPath())

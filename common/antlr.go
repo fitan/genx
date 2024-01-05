@@ -5,6 +5,7 @@ import (
 	"github.com/antlr4-go/antlr/v4"
 	"github.com/cockroachdb/errors"
 	"github.com/fitan/genx/parser"
+	"github.com/samber/lo"
 	"go/ast"
 	"go/token"
 	"golang.org/x/tools/go/packages"
@@ -38,6 +39,20 @@ func (d *Doc) ByFuncNameAndArgName(funcName, argName string) (string, bool) {
 	return "", false
 }
 
+func (d *Doc) ListByFuncName(name string, list *[]string) bool {
+	if d == nil {
+		return false
+	}
+	f := d.ByFuncName(name)
+	if f == nil {
+		return false
+	}
+	for _, arg := range f.Args {
+		*list = append(*list, arg.Value)
+	}
+	return true
+}
+
 func (d *Doc) ByFuncNameAndArgs(name string, args ...*string) bool {
 	if d == nil {
 		return false
@@ -46,15 +61,9 @@ func (d *Doc) ByFuncNameAndArgs(name string, args ...*string) bool {
 	if f == nil {
 		return false
 	}
-	record := make([]string, len(args), len(args))
+	max := lo.Max([]int{len(f.Args), len(args)})
+	record := make([]string, max, max)
 	for i, arg := range f.Args {
-		//value := arg.Value
-		//if strings.HasPrefix(arg.Value, `"`) && strings.HasSuffix(arg.Value, `"`) {
-		//	value = strings.Trim(arg.Value, `"`)
-		//}
-		//if strings.HasPrefix(arg.Value, `'`) && strings.HasSuffix(arg.Value, `'`) {
-		//	value = strings.Trim(arg.Value, `'`)
-		//}
 		record[i] = arg.Value
 	}
 	for i, _ := range args {

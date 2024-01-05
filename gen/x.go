@@ -8,6 +8,7 @@ import (
 	"golang.org/x/exp/slog"
 	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/go/packages"
+	"os"
 	"strings"
 	"time"
 )
@@ -307,6 +308,9 @@ func NewXByPkg(p *packages.Package) (*X, error) {
 }
 
 func NewX(dir string) (*X, error) {
+	handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{AddSource: true, Level: slog.LevelInfo})
+	log := slog.New(handler)
+	slog.SetDefault(log)
 	p, err := common.LoadPkg(dir)
 	if err != nil {
 		return nil, err

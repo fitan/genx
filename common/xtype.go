@@ -245,7 +245,6 @@ func toCodeComparePkgNameString(pkg *packages.Package, t types.Type, s string) s
 			}
 			return p.Name()
 		})
-		fmt.Println(cast, ts, cast.Variadic())
 		if cast.Variadic() {
 			return "..." + ts
 		}

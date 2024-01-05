@@ -2,7 +2,6 @@ package common
 
 import (
 	"encoding/json"
-	"fmt"
 	"reflect"
 	"testing"
 )
@@ -57,7 +56,6 @@ asdfsa"dfsadf
 				t.Errorf("ParseDoc() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			fmt.Println(got)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ParseDoc() got = %v, want %v", got, tt.want)
 				b, _ := json.Marshal(got)

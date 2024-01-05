@@ -90,6 +90,7 @@ func (e *Enum) Gen() (codes []jen.Code, err error) {
 	codes = append(codes, e.Value()...)
 	//codes = append(codes, e.Json()...)
 	//codes = append(codes, e.GormSerialize()...)
+	codes = append(codes, e.Remark()...)
 	codes = append(codes, e.String()...)
 	return
 }
@@ -106,7 +107,13 @@ func (e *Enum) Const() (codes []jen.Code) {
 		}
 	}).Line().Line()
 
-	return []jen.Code{jen.Const().Defs(codes...).Line().Line(), aliasCode}
+	remarkCode := jen.Const().DefsFunc(func(g *jen.Group) {
+		for _, arg := range e.Args {
+			g.Id(strings.ToUpper(e.TypeName + "_" + arg.Key + "remark")).Op("=").Lit(arg.Value)
+		}
+	}).Line().Line()
+
+	return []jen.Code{jen.Const().Defs(codes...).Line().Line(), aliasCode, remarkCode}
 }
 
 func (e *Enum) Value() (codes []jen.Code) {
@@ -124,6 +131,21 @@ func (e *Enum) Value() (codes []jen.Code) {
 	).Line().Line()
 
 	codes = append(codes, varCode, parseCode)
+	return
+}
+
+func (e *Enum) Remark() (code []jen.Code) {
+	stringCode := jen.Func().Params(jen.Id("e").Id(e.TypeName)).Id("Remark").Params().String().Block(
+		jen.Switch(jen.Id("e")).BlockFunc(func(g *jen.Group) {
+			for argIndex, arg := range e.Args {
+				g.Case(jen.Lit(argIndex + 1)).Block(
+					jen.Return(jen.Id(strings.ToUpper(e.TypeName + "_" + arg.Key + "remark"))),
+				)
+			}
+		}),
+		jen.Return(jen.Qual("fmt", "Sprintf").Call(jen.Lit("unknown %d"), jen.Id("e"))),
+	).Line().Line()
+	code = append(code, stringCode)
 	return
 }
 

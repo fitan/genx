@@ -5,7 +5,7 @@ lexer grammar TLexer;
 }
 
 
-ATID: '@' [a-zA-Z_][a-zA-Z0-9_]*;
+ATID: '@' [a-zA-Z_][a-zA-Z0-9_-]*;
 
 
 FieldFuncName: ATID  ' '+ -> pushMode(OLDFUNC);

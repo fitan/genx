@@ -16,7 +16,8 @@ require (
 	github.com/spf13/cobra v1.7.0
 	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1
 	golang.org/x/tools v0.10.0
-	gorm.io/gorm v1.25.2
+	gorm.io/driver/mysql v1.3.6
+	gorm.io/gorm v1.25.5
 )
 
 require (
@@ -26,6 +27,7 @@ require (
 	github.com/getsentry/sentry-go v0.18.0 // indirect
 	github.com/go-kit/log v0.2.1 // indirect
 	github.com/go-logfmt/logfmt v0.5.1 // indirect
+	github.com/go-sql-driver/mysql v1.6.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect

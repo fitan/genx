@@ -46,7 +46,7 @@ locals [
 : ATID {$FuncName = $ATID.text} ( LPAREN (String {$FuncArgs = append($FuncArgs, GenFuncArg("",trimQuotation($String.text)))} | argument {$FuncArgs = append($FuncArgs, $argument.res)} ) (',' (String {$FuncArgs = append($FuncArgs, GenFuncArg("",trimQuotation($String.text)))} | argument {$FuncArgs = append($FuncArgs, $argument.res)}))* RPAREN ) NEWLINE
     | ATID {$FuncName = $ATID.text} LPAREN RPAREN NEWLINE
     | FieldFuncName {$FuncName = strings.TrimSpace($FieldFuncName.text)} (FIELD {$FuncArgs = append($FuncArgs, GenFuncArg("",$FIELD.text))} (FIELD {$FuncArgs = append($FuncArgs, GenFuncArg("",$FIELD.text))})*)? OLDFUNCCLOSE
-    | ATID
+    | ATID {$FuncName = $ATID.text}
     ;
 
 
