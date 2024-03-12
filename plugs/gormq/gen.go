@@ -409,15 +409,19 @@ func (q FieldQuery) GenClause() (before, ql jen.Code) {
 		return b, jen.Id(q.Clause).Call(code...)
 
 	}
+	header := "q."
+	if q.XType.Pointer {
+		header = "*" + header
+	}
 
 	if len(q.DbNameList) == 1 {
 		code := []jen.Code{jen.Lit(q.GenQuery())}
-		code = append(code, q.Op.ConvertValue("q."+strings.Join(q.Path, "."))...)
+		code = append(code, q.Op.ConvertValue(header+strings.Join(q.Path, "."))...)
 		return nil, jen.Id(q.Clause).Call(code...)
 	} else {
 
 		first := q.DbNameList[0] + " " + q.Op.Convert() + " ?"
-		value := q.Op.ConvertValue("q." + strings.Join(q.Path, "."))
+		value := q.Op.ConvertValue(header + strings.Join(q.Path, "."))
 		code := []jen.Code{jen.Lit(first)}
 		code = append(code, value...)
 		statement := jen.Id(q.Clause).Call(code...)

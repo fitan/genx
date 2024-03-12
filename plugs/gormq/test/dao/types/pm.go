@@ -64,7 +64,7 @@ type PmListBrand struct {
 type PmListOsBrand struct {
 	// @gq-column product_type
 	// @gq-op like
-	ProductType string
+	ProductType *string
 	// @gq-op like
 	// @gq-column product_model
 	Brand string

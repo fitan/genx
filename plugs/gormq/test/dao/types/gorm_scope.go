@@ -17,7 +17,7 @@ func (q *PmList) Scope(db *gorm.DB) *gorm.DB {
 	db = db.Where("name in ?", q.Name)
 	if q.Sn1 != nil {
 
-		db = db.Where("sn = ?", q.Sn1)
+		db = db.Where("sn = ?", *q.Sn1)
 	}
 
 	db = db.Where("sn = ?", q.Keyword.Keyword).Or("uuid = ?", q.Keyword.Keyword)
@@ -29,7 +29,7 @@ func (q *PmList) Scope(db *gorm.DB) *gorm.DB {
 	db = db.Where("(product_type, product_model) IN ?", ListInValue)
 	if q.PmListNest.MaintainStatus != nil {
 
-		db = db.Where("maintain_status = ?", q.PmListNest.MaintainStatus)
+		db = db.Where("maintain_status = ?", *q.PmListNest.MaintainStatus)
 	}
 	db = db.Where(&q.Match, "MaintainStatus")
 	db = db.Where("brand_uuid in (?)", q.BrandSub.Scope(db.Session(&gorm.Session{NewDB: true}).Select("uuid")))
@@ -43,7 +43,7 @@ func (q *PmList) Scope(db *gorm.DB) *gorm.DB {
 	if q.PointPmListNest != nil {
 		if q.PointPmListNest.MaintainStatus != nil {
 
-			db = db.Where("maintain_status = ?", q.PointPmListNest.MaintainStatus)
+			db = db.Where("maintain_status = ?", *q.PointPmListNest.MaintainStatus)
 		}
 		db = db.Where("os_brand_uuid in (?)", q.PointPmListNest.OsBrandSub.Scope(db.Session(&gorm.Session{NewDB: true}).Select("uuid")))
 	}
@@ -59,8 +59,10 @@ func (q *PmListBrand) Scope(db *gorm.DB) *gorm.DB {
 }
 func (q *PmListOsBrand) Scope(db *gorm.DB) *gorm.DB {
 	db = db.Model(&model.Brand{})
+	if q.ProductType != nil {
 
-	db = db.Where("product_type like ?", "%"+q.ProductType+"%")
+		db = db.Where("product_type like ?", "%"+*q.ProductType+"%")
+	}
 
 	db = db.Where("product_model like ?", "%"+q.Brand+"%")
 
