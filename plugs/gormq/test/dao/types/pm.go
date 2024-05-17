@@ -8,6 +8,7 @@ type PmList struct {
 	UUID string `json:"uuid" param:"query,uuid"`
 	// @gq-column sn
 	Sn string `json:"sn" param:"query,sn"`
+
 	// @gq-sub brand_uuid uuid
 	BrandSub PmListBrand
 	// @gq-sub os_brand_uuid uuid
@@ -17,6 +18,7 @@ type PmList struct {
 	// @gq-column sn uuid
 	//Keyword string `json:"keyword" param:"query,keyword"
 
+	// @gq-column uuid
 	Name []string `json:"name"`
 
 	// @gq-column sn
@@ -34,7 +36,7 @@ type PmList struct {
 
 	PointPmListNest *PmListNest
 
-	// @gq-struct MaintainStatus
+	// @gq-struct maintain_status
 	Match PmListNest
 }
 

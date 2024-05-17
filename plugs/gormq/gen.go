@@ -276,6 +276,15 @@ func (g *GormQuery) GenWhere(code *jen.Group) {
 			code.If(jen.Id("q." + strings.Join(v.Path, ".")).Op("!=").Nil()).BlockFunc(func(group *jen.Group) {
 				group.Add(genCode)
 			})
+		} else if v.XType.Basic {
+			if v.XType.BasicType.Kind() == types.String {
+				code.If(jen.Id("q." + strings.Join(v.Path, ".")).Op("!=").Lit("")).BlockFunc(func(group *jen.Group) {
+					group.Add(genCode)
+
+				})
+			} else {
+				code.Add(genCode)
+			}
 		} else {
 			code.Add(genCode)
 		}
@@ -287,6 +296,14 @@ func (g *GormQuery) GenWhere(code *jen.Group) {
 			code.If(jen.Id("q." + strings.Join(v.Path, ".")).Op("!=").Nil()).BlockFunc(func(group *jen.Group) {
 				group.Add(genCode)
 			})
+		} else if v.XType.Basic {
+			if v.XType.BasicType.Kind() == types.String {
+				code.If(jen.Id("q." + strings.Join(v.Path, ".")).Op("!=").Lit("")).BlockFunc(func(group *jen.Group) {
+					group.Add(genCode)
+				})
+			} else {
+				code.Add(genCode)
+			}
 		} else {
 			code.Add(genCode)
 		}
@@ -298,6 +315,14 @@ func (g *GormQuery) GenWhere(code *jen.Group) {
 			code.If(jen.Id("q." + strings.Join(v.Path, ".")).Op("!=").Nil()).BlockFunc(func(group *jen.Group) {
 				group.Add(genCode)
 			})
+		} else if v.XType.Basic {
+			if v.XType.BasicType.Kind() == types.String {
+				code.If(jen.Id("q." + strings.Join(v.Path, ".")).Op("!=").Lit("")).BlockFunc(func(group *jen.Group) {
+					group.Add(genCode)
+				})
+			} else {
+				code.Add(genCode)
+			}
 		} else {
 			code.Add(genCode)
 		}
@@ -309,6 +334,15 @@ func (g *GormQuery) GenWhere(code *jen.Group) {
 			code.If(jen.Id("q." + strings.Join(v.Path, ".")).Op("!=").Nil()).BlockFunc(func(group *jen.Group) {
 				group.Add(genCode)
 			})
+		} else if v.XType.Basic {
+			if v.XType.BasicType.Kind() == types.String {
+				code.If(jen.Id("q." + strings.Join(v.Path, ".")).Op("!=").Lit("")).BlockFunc(func(group *jen.Group) {
+					group.Add(genCode)
+				})
+			} else {
+				code.Add(genCode)
+			}
+
 		} else {
 			code.Add(genCode)
 		}

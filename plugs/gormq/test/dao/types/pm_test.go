@@ -17,6 +17,8 @@ func TestPm(t *testing.T) {
 	}
 	db = db.Debug()
 
+	pt := "fsdafasdfsf"
+
 	q := &PmList{
 		UUID: "fsdafasdfsf",
 		Sn:   "fsadfas",
@@ -25,7 +27,7 @@ func TestPm(t *testing.T) {
 			Brand:       "fadsfas",
 		},
 		OsBrandSub: PmListOsBrand{
-			ProductType: "sdafas",
+			ProductType: &pt,
 			Brand:       "fasdfads",
 			ListIn:      nil,
 		},
@@ -45,7 +47,7 @@ func TestPm(t *testing.T) {
 		},
 		PmListNest: PmListNest{
 			OsBrandSub: PmListOsBrand{
-				ProductType: "1",
+				ProductType: &pt,
 				Brand:       "1",
 				ListIn:      nil,
 			},

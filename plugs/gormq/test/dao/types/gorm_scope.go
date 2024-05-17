@@ -7,20 +7,26 @@ import (
 
 func (q *PmList) Scope(db *gorm.DB) *gorm.DB {
 	db = db.Model(&model.PhysicalMachine{})
+	if q.UUID != "" {
 
-	db = db.Where("uuid = ?", q.UUID)
+		db = db.Where("uuid = ?", q.UUID)
+	}
+	if q.Sn != "" {
 
-	db = db.Where("sn = ?", q.Sn)
+		db = db.Where("sn = ?", q.Sn)
+	}
 
 	db = db.Where("maintain_status = ?", q.MaintainStatus)
 
-	db = db.Where("name in ?", q.Name)
+	db = db.Where("uuid in ?", q.Name)
 	if q.Sn1 != nil {
 
 		db = db.Where("sn = ?", *q.Sn1)
 	}
+	if q.Keyword.Keyword != "" {
 
-	db = db.Where("sn = ?", q.Keyword.Keyword).Or("uuid = ?", q.Keyword.Keyword)
+		db = db.Where("sn = ?", q.Keyword.Keyword).Or("uuid = ?", q.Keyword.Keyword)
+	}
 
 	ListInValue := make([][]interface{}, 0, 0)
 	for _, v := range q.ListIn {
@@ -36,8 +42,10 @@ func (q *PmList) Scope(db *gorm.DB) *gorm.DB {
 	db = db.Where("os_brand_uuid in (?)", q.OsBrandSub.Scope(db.Session(&gorm.Session{NewDB: true}).Select("uuid")))
 	db = db.Where("os_brand_uuid in (?)", q.PmListNest.OsBrandSub.Scope(db.Session(&gorm.Session{NewDB: true}).Select("uuid")))
 	db = db.Or(func(db *gorm.DB) *gorm.DB {
+		if q.PmListKeyword.Keyword != "" {
 
-		db = db.Where("sn = ?", q.PmListKeyword.Keyword).Or("uuid = ?", q.PmListKeyword.Keyword)
+			db = db.Where("sn = ?", q.PmListKeyword.Keyword).Or("uuid = ?", q.PmListKeyword.Keyword)
+		}
 		return db
 	}(db.Session(&gorm.Session{NewDB: true})))
 	if q.PointPmListNest != nil {
@@ -51,10 +59,14 @@ func (q *PmList) Scope(db *gorm.DB) *gorm.DB {
 }
 func (q *PmListBrand) Scope(db *gorm.DB) *gorm.DB {
 	db = db.Model(&model.Brand{})
+	if q.ProductType != "" {
 
-	db = db.Where("product_type like ?", "%"+q.ProductType+"%")
+		db = db.Where("product_type like ?", "%"+q.ProductType+"%")
+	}
+	if q.Brand != "" {
 
-	db = db.Where("product_model like ?", "%"+q.Brand+"%")
+		db = db.Where("product_model like ?", "%"+q.Brand+"%")
+	}
 	return db
 }
 func (q *PmListOsBrand) Scope(db *gorm.DB) *gorm.DB {
@@ -63,8 +75,10 @@ func (q *PmListOsBrand) Scope(db *gorm.DB) *gorm.DB {
 
 		db = db.Where("product_type like ?", "%"+*q.ProductType+"%")
 	}
+	if q.Brand != "" {
 
-	db = db.Where("product_model like ?", "%"+q.Brand+"%")
+		db = db.Where("product_model like ?", "%"+q.Brand+"%")
+	}
 
 	ListInValue := make([][]interface{}, 0, 0)
 	for _, v := range q.ListIn {
