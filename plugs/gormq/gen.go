@@ -244,7 +244,7 @@ func (g *GormQuery) GenScope() jen.Code {
 		func(group *jen.Group) {
 			group.Id("db").Op("=").Id("db.Model").Call(jen.Id("&" + g.ModelName + "{}"))
 
-			g.GenWhere(group)
+			group.Add(g.GenWhere())
 
 			//for _, v := range g.FieldQueryList {
 			//	group.Id("db").Op("=").Id("db.").Add(v.GenClause())
@@ -267,24 +267,45 @@ func (g *GormQuery) GenScope() jen.Code {
 	)
 }
 
-func (g *GormQuery) GenWhere(code *jen.Group) {
+func (g *GormQuery) GenWhere() *jen.Statement {
+	code := jen.Null()
+	checkCodes := make([]*jen.Statement, 0)
+	subDb := jen.Null()
+
+	for _, v := range g.SubQueryList {
+		subDb.Add(v.SubDb())
+	}
+
 	for _, v := range g.FieldQueryList {
 		before, ql := v.GenClause()
 		genCode := jen.Line().Add(before).Line()
 		genCode.Id("db").Op("=").Id("db.").Add(ql)
 		if v.XType.Pointer {
-			code.If(jen.Id("q." + strings.Join(v.Path, ".")).Op("!=").Nil()).BlockFunc(func(group *jen.Group) {
+
+			checkCodes = append(checkCodes, jen.Id("q."+strings.Join(v.Path, ".")).Op("==").Nil())
+
+			code.Line().If(jen.Id("q." + strings.Join(v.Path, ".")).Op("!=").Nil()).BlockFunc(func(group *jen.Group) {
 				group.Add(genCode)
 			})
 		} else if v.XType.Basic {
 			if v.XType.BasicType.Kind() == types.String {
-				code.If(jen.Id("q." + strings.Join(v.Path, ".")).Op("!=").Lit("")).BlockFunc(func(group *jen.Group) {
+
+				checkCodes = append(checkCodes, jen.Id("q."+strings.Join(v.Path, ".")).Op("==").Lit(""))
+
+				code.Line().If(jen.Id("q." + strings.Join(v.Path, ".")).Op("!=").Lit("")).BlockFunc(func(group *jen.Group) {
 					group.Add(genCode)
 
 				})
 			} else {
 				code.Add(genCode)
 			}
+		} else if v.XType.List {
+			checkCodes = append(checkCodes, jen.Len(jen.Id("q."+strings.Join(v.Path, "."))).Op("==").Id("0"))
+
+			code.Line().If(jen.Len(jen.Id("q." + strings.Join(v.Path, "."))).Op("!=").Id("0")).BlockFunc(func(group *jen.Group) {
+				group.Add(genCode)
+			})
+
 		} else {
 			code.Add(genCode)
 		}
@@ -293,12 +314,18 @@ func (g *GormQuery) GenWhere(code *jen.Group) {
 	for _, v := range g.StructQueryList {
 		genCode := jen.Id("db").Op("=").Id("db.").Add(v.GenClause())
 		if v.XType.Pointer {
-			code.If(jen.Id("q." + strings.Join(v.Path, ".")).Op("!=").Nil()).BlockFunc(func(group *jen.Group) {
+
+			checkCodes = append(checkCodes, jen.Id("q."+strings.Join(v.Path, ".")).Op("==").Nil())
+
+			code.Line().If(jen.Id("q." + strings.Join(v.Path, ".")).Op("!=").Nil()).BlockFunc(func(group *jen.Group) {
 				group.Add(genCode)
 			})
 		} else if v.XType.Basic {
 			if v.XType.BasicType.Kind() == types.String {
-				code.If(jen.Id("q." + strings.Join(v.Path, ".")).Op("!=").Lit("")).BlockFunc(func(group *jen.Group) {
+
+				checkCodes = append(checkCodes, jen.Id("q."+strings.Join(v.Path, ".")).Op("==").Lit(""))
+
+				code.Line().If(jen.Id("q." + strings.Join(v.Path, ".")).Op("!=").Lit("")).BlockFunc(func(group *jen.Group) {
 					group.Add(genCode)
 				})
 			} else {
@@ -310,33 +337,48 @@ func (g *GormQuery) GenWhere(code *jen.Group) {
 	}
 
 	for _, v := range g.SubQueryList {
-		genCode := jen.Id("db").Op("=").Id("db.").Add(v.GenClause())
+		genCode := jen.If(v.SubDbName().Op("!=").Nil()).BlockFunc(func(group *jen.Group) {
+			group.Id("db").Op("=").Id("db.").Add(v.GenClause())
+		})
+		checkCodes = append(checkCodes, v.CheckDb())
 		if v.XType.Pointer {
-			code.If(jen.Id("q." + strings.Join(v.Path, ".")).Op("!=").Nil()).BlockFunc(func(group *jen.Group) {
+
+			checkCodes = append(checkCodes, jen.Id("q."+strings.Join(v.Path, ".")).Op("==").Nil())
+
+			code.Line().If(jen.Id("q." + strings.Join(v.Path, ".")).Op("!=").Nil()).BlockFunc(func(group *jen.Group) {
 				group.Add(genCode)
 			})
 		} else if v.XType.Basic {
 			if v.XType.BasicType.Kind() == types.String {
-				code.If(jen.Id("q." + strings.Join(v.Path, ".")).Op("!=").Lit("")).BlockFunc(func(group *jen.Group) {
+
+				checkCodes = append(checkCodes, jen.Id("q."+strings.Join(v.Path, ".")).Op("==").Lit(""))
+
+				code.Line().If(jen.Id("q." + strings.Join(v.Path, ".")).Op("!=").Lit("")).BlockFunc(func(group *jen.Group) {
 					group.Add(genCode)
 				})
 			} else {
-				code.Add(genCode)
+				code.Line().Add(genCode)
 			}
 		} else {
-			code.Add(genCode)
+			code.Line().Add(genCode)
 		}
 	}
 
 	for _, v := range g.GroupQueryList {
 		genCode := jen.Id("db").Op("=").Id("db." + v.Clause).Call(v.GormQuery.GenWhereScope().Call(jen.Id("db.Session(&gorm.Session{NewDB: true})")))
 		if v.XType.Pointer {
-			code.If(jen.Id("q." + strings.Join(v.Path, ".")).Op("!=").Nil()).BlockFunc(func(group *jen.Group) {
+
+			checkCodes = append(checkCodes, jen.Id("q."+strings.Join(v.Path, ".")).Op("==").Nil())
+
+			code.Line().If(jen.Id("q." + strings.Join(v.Path, ".")).Op("!=").Nil()).BlockFunc(func(group *jen.Group) {
 				group.Add(genCode)
 			})
 		} else if v.XType.Basic {
 			if v.XType.BasicType.Kind() == types.String {
-				code.If(jen.Id("q." + strings.Join(v.Path, ".")).Op("!=").Lit("")).BlockFunc(func(group *jen.Group) {
+
+				checkCodes = append(checkCodes, jen.Id("q."+strings.Join(v.Path, ".")).Op("==").Lit(""))
+
+				code.Line().If(jen.Id("q." + strings.Join(v.Path, ".")).Op("!=").Lit("")).BlockFunc(func(group *jen.Group) {
 					group.Add(genCode)
 				})
 			} else {
@@ -349,16 +391,32 @@ func (g *GormQuery) GenWhere(code *jen.Group) {
 	}
 
 	for _, v := range g.PointStructQueryList {
-		code.If(jen.Id("q." + strings.Join(v.Path, ".")).Op("!=").Nil()).BlockFunc(func(group *jen.Group) {
-			v.Parser.GormQuery.GenWhere(group)
+
+		checkCodes = append(checkCodes, jen.Id("q."+strings.Join(v.Path, ".")).Op("==").Nil())
+
+		code.Line().If(jen.Id("q." + strings.Join(v.Path, ".")).Op("!=").Nil()).BlockFunc(func(group *jen.Group) {
+			group.Add(v.Parser.GormQuery.GenWhere())
 		})
 	}
+
+	if len(checkCodes) > 0 {
+		ifCode := checkCodes[0]
+
+		for _, v := range checkCodes[1:] {
+			ifCode = ifCode.Op("&&").Add(v)
+		}
+		return jen.Add(subDb).Line().If(jen.Id(ifCode.GoString())).BlockFunc(func(group *jen.Group) {
+			group.Return(jen.Nil())
+		}).Line().Add(code)
+	}
+
+	return code.Line()
 }
 
 func (g *GormQuery) GenWhereScope() *jen.Statement {
 	return jen.Func().Call(jen.Id("db *gorm.DB")).Params(jen.Id("*gorm.DB")).BlockFunc(
 		func(group *jen.Group) {
-			g.GenWhere(group)
+			group.Add(g.GenWhere())
 
 			group.Return(jen.Id("db"))
 		})
@@ -480,7 +538,19 @@ type SubQuery struct {
 
 // Where("id in (?)", scope(db.Select(id)))
 func (s SubQuery) GenClause() jen.Code {
-	return jen.Id(s.Clause).Call(jen.Lit(s.ForeignKey+" in (?)"), jen.Id("q."+strings.Join(s.Path, ".")+".Scope").Call(jen.Id(`db.Session(&gorm.Session{NewDB: true}).Select("`+s.References+`")`)))
+	return jen.Id(s.Clause).Call(jen.Lit(s.ForeignKey+" in (?)"), jen.Id(s.SubDbName().GoString()+".Select").Call(jen.Lit(s.References)))
+}
+
+func (s SubQuery) SubDb() jen.Code {
+	return s.SubDbName().Op(":=").Id("q." + strings.Join(s.Path, ".") + ".Scope").Call(jen.Id(`db.Session(&gorm.Session{NewDB: true})`)).Line()
+}
+
+func (s SubQuery) SubDbName() *jen.Statement {
+	return jen.Id(strings.Join(s.Path, "_") + "DB")
+}
+
+func (s SubQuery) CheckDb() *jen.Statement {
+	return s.SubDbName().Op("==").Nil()
 }
 
 type StructQuery struct {
