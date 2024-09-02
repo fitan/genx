@@ -10,6 +10,7 @@ import (
 func Gen(pkg *packages.Package, methods []common.InterfaceMethod) {
 	slog.Info("gen logging", slog.Any("pkg", pkg), slog.Any("methods", methods))
 	j := jen.NewFile(pkg.Name)
+	j.AddImport("github.com/samber/do/v2", "do")
 	common.JenAddImports(pkg, j)
 	j.Add(genLoggingStruct())
 	j.Add()
@@ -22,7 +23,7 @@ func Gen(pkg *packages.Package, methods []common.InterfaceMethod) {
 
 	j.Add(funcList...)
 	j.Add(genNewLogging(pkg.PkgPath))
-	common.WriteGO("log.go", j.GoString())
+	common.WriteGO("logging.go", j.GoString())
 
 }
 
@@ -49,7 +50,7 @@ func genLoggingFunc(method common.InterfaceMethod) jen.Code {
 		if !param.Basic() {
 			jsonParamCode = append(jsonParamCode,
 				jen.List(jen.Id(param.Name+"Byte"), jen.Id("_")).Op(":=").Qual("encoding/json", "Marshal").Call(jen.Id(param.Name)).Line(),
-				jen.Id(param.Name+"Json").Op(":=").Id("string").Call(jen.Id(param.Name+"Byte")).Line(),
+				jen.Id(param.Name+"Json").Op(":=").Id("string").Call(jen.Id(param.Name+"Byte")),
 			)
 
 			logParamCode = append(logParamCode, jen.Lit(param.Name), jen.Id(param.Name+"Json"))
@@ -58,7 +59,7 @@ func genLoggingFunc(method common.InterfaceMethod) jen.Code {
 		}
 	}
 
-	logParamStatement := jen.List(logParamCode...)
+	// logParamStatement := jen.List(logParamCode...)
 	jsonStatement := jen.Statement(jsonParamCode)
 
 	for _, param := range method.Results {
@@ -74,20 +75,33 @@ func genLoggingFunc(method common.InterfaceMethod) jen.Code {
 		&jsonStatement,
 		jen.Defer().Func().Params(
 			jen.Id("begin").Qual("time", "Time")).
-			Block(
-				jen.Id("_").Op("=").Id("s").Dot("logger").Dot("Log").Call(
-					jen.Id("s").Dot("traceId"),
-					jen.Id("ctx").Dot("Value").Call(jen.Id("s").Dot("traceId")),
-					jen.Lit("method"), jen.Lit(method.Name),
-					logParamStatement,
-					jen.Lit("took"), jen.Qual("time", "Since").Call(jen.Id("begin")),
-					func() jen.Code {
-						if method.ReturnsError {
-							return jen.Lit("err").Op(",").Id("err")
-						}
-						return nil
-					}(),
-				)).Call(jen.Qual("time", "Now").Call()),
+			BlockFunc(func(g *jen.Group) {
+				g.Var().Id("level").Op("=").Id("slog.LevelInfo")
+
+				if method.ReturnsError {
+					g.If(jen.Id("err != nil")).Block(
+						jen.Id("level").Op("=").Id("slog.LevelError"),
+					)
+				}
+
+				g.Id("s").Dot("logger").Dot("Log").CallFunc(func(g *jen.Group) {
+					g.Id("ctx")
+					g.Id("level")
+					g.Lit("")
+					g.Lit("method")
+					g.Lit(method.Name)
+					for _, v := range logParamCode {
+						g.Add(v)
+					}
+					g.Lit("took")
+					g.Qual("time", "Since").Call(jen.Id("begin")).Dot("String").Call()
+					if method.ReturnsError {
+						g.Lit("err").Op(",").Id("err")
+					} else {
+						g.Add(jen.Return())
+					}
+				})
+			}).Call(jen.Qual("time", "Now").Call()),
 		func() jen.Code {
 			if method.HasResults() {
 				return jen.Return().Id("s").Dot("next").Dot(method.Name).Call(
@@ -102,20 +116,18 @@ func genLoggingFunc(method common.InterfaceMethod) jen.Code {
 }
 
 func genLoggingStruct() jen.Code {
-	return jen.Null().Type().Id("logging").Struct(jen.Id("logger").Qual("github.com/go-kit/kit/log", "Logger"), jen.Id("next").Id("Service"), jen.Id("traceId").Id("string"))
+	return jen.Null().Type().Id("logging").Struct(
+		jen.Id("logger").Op("*").Qual("log/slog", "Logger"),
+		jen.Id("next").Id("Service"),
+	)
 }
 
 func genNewLogging(logPrefix string) jen.Code {
-	return jen.Func().Id("NewLogging").Params(jen.Id("logger").Id("log").Dot("Logger"), jen.Id("traceId").Id("string")).Params(jen.Id("Middleware")).Block(
-		jen.Id("logger").Op("=").Id("log").Dot("With").Call(
-			jen.Id("logger"),
-			jen.Lit(logPrefix),
-			jen.Lit("logging"),
-		), jen.Return().Func().Params(jen.Id("next").Id("Service")).Params(jen.Id("Service")).Block(
-			jen.Return().Op("&").Id("logging").Values(jen.Id("logger").Op(":").Qual("github.com/go-kit/kit/log/level", "Info").Call(
-				jen.Id("logger")),
-				jen.Id("next").Op(":").Id("next"),
-				jen.Id("traceId").Op(":").Id("traceId")),
+	return jen.Func().Id("NewLogging").Params(jen.Id("i").Id("do").Dot("Injector")).Params(jen.Id("Middleware")).Block(
+		jen.Return().Func().Params(jen.Id("next").Id("Service")).Params(jen.Id("Service")).Block(
+			jen.Return().Op("&").Id("logging").Values(
+				jen.Id("logger").Op(":").Id(`do.MustInvoke[*slog.Logger](i)`),
+				jen.Id("next").Op(":").Id("next")),
 		),
 	)
 }

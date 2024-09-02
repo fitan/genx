@@ -1,16 +1,16 @@
 package gen
 
 import (
-	"github.com/davecgh/go-spew/spew"
-	"github.com/fitan/genx/common"
 	"go/ast"
 	"go/types"
+	"strings"
+	"time"
+
+	"github.com/davecgh/go-spew/spew"
+	"github.com/fitan/genx/common"
 	"golang.org/x/exp/slog"
 	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/go/packages"
-	"os"
-	"strings"
-	"time"
 )
 
 type TypeName int
@@ -308,9 +308,6 @@ func NewXByPkg(p *packages.Package) (*X, error) {
 }
 
 func NewX(dir string) (*X, error) {
-	handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{AddSource: true, Level: slog.LevelInfo})
-	log := slog.New(handler)
-	slog.SetDefault(log)
 	p, err := common.LoadPkg(dir)
 	if err != nil {
 		return nil, err

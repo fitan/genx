@@ -3,9 +3,10 @@ package common
 import (
 	"go/ast"
 	"go/types"
+	"strings"
+
 	"golang.org/x/exp/slog"
 	"golang.org/x/tools/go/packages"
-	"strings"
 )
 
 type InterfaceSerialize struct {
@@ -160,6 +161,14 @@ func (m InterfaceMethod) ResultsMapExcludeErr() string {
 	ss := []string{}
 	for _, r := range m.ResultsExcludeErr() {
 		ss = append(ss, `"`+r.Name+`": `+r.Name)
+	}
+	return "map[string]interface{}{\n" + strings.Join(ss, ",\n ") + "}"
+}
+
+func (m InterfaceMethod) ResultsMapValPointExcludeErr() string {
+	ss := []string{}
+	for _, r := range m.ResultsExcludeErr() {
+		ss = append(ss, `"`+r.Name+`": &`+r.Name)
 	}
 	return "map[string]interface{}{\n" + strings.Join(ss, ",\n ") + "}"
 }

@@ -20,7 +20,7 @@ func Gen(j *jen.File, option gen.Option, implGoTypeMetes []gen.StructGoTypeMeta)
 		p := NewParser(option, v)
 		p.Parse([]string{}, true)
 
-		j.Add(p.GormQuery.GenScope())
+		j.Line().Add(p.GormQuery.GenScope())
 	}
 }
 
@@ -244,7 +244,7 @@ func (g *GormQuery) GenScope() jen.Code {
 		func(group *jen.Group) {
 			group.Id("db").Op("=").Id("db.Model").Call(jen.Id("&" + g.ModelName + "{}"))
 
-			group.Add(g.GenWhere())
+			group.Add(g.GenWhere().Line())
 
 			//for _, v := range g.FieldQueryList {
 			//	group.Id("db").Op("=").Id("db.").Add(v.GenClause())
@@ -296,6 +296,13 @@ func (g *GormQuery) GenWhere() *jen.Statement {
 					group.Add(genCode)
 
 				})
+			} else if v.XType.BasicType.Info() == types.IsInteger {
+				checkCodes = append(checkCodes, jen.Id("q."+strings.Join(v.Path, ".")).Op("==").Lit(0))
+
+				code.Line().If(jen.Id("q." + strings.Join(v.Path, ".")).Op("!=").Lit(0)).BlockFunc(func(group *jen.Group) {
+					group.Add(genCode)
+
+				})
 			} else {
 				code.Add(genCode)
 			}
@@ -312,7 +319,7 @@ func (g *GormQuery) GenWhere() *jen.Statement {
 	}
 
 	for _, v := range g.StructQueryList {
-		genCode := jen.Id("db").Op("=").Id("db.").Add(v.GenClause())
+		genCode := jen.Line().Id("db").Op("=").Id("db.").Add(v.GenClause())
 		if v.XType.Pointer {
 
 			checkCodes = append(checkCodes, jen.Id("q."+strings.Join(v.Path, ".")).Op("==").Nil())
@@ -320,24 +327,13 @@ func (g *GormQuery) GenWhere() *jen.Statement {
 			code.Line().If(jen.Id("q." + strings.Join(v.Path, ".")).Op("!=").Nil()).BlockFunc(func(group *jen.Group) {
 				group.Add(genCode)
 			})
-		} else if v.XType.Basic {
-			if v.XType.BasicType.Kind() == types.String {
-
-				checkCodes = append(checkCodes, jen.Id("q."+strings.Join(v.Path, ".")).Op("==").Lit(""))
-
-				code.Line().If(jen.Id("q." + strings.Join(v.Path, ".")).Op("!=").Lit("")).BlockFunc(func(group *jen.Group) {
-					group.Add(genCode)
-				})
-			} else {
-				code.Add(genCode)
-			}
 		} else {
 			code.Add(genCode)
 		}
 	}
 
 	for _, v := range g.SubQueryList {
-		genCode := jen.If(v.SubDbName().Op("!=").Nil()).BlockFunc(func(group *jen.Group) {
+		genCode := jen.Line().If(v.SubDbName().Op("!=").Nil()).BlockFunc(func(group *jen.Group) {
 			group.Id("db").Op("=").Id("db.").Add(v.GenClause())
 		})
 		checkCodes = append(checkCodes, v.CheckDb())
@@ -365,7 +361,7 @@ func (g *GormQuery) GenWhere() *jen.Statement {
 	}
 
 	for _, v := range g.GroupQueryList {
-		genCode := jen.Id("db").Op("=").Id("db." + v.Clause).Call(v.GormQuery.GenWhereScope().Call(jen.Id("db.Session(&gorm.Session{NewDB: true})")))
+		genCode := jen.Line().Id("db").Op("=").Id("db." + v.Clause).Call(v.GormQuery.GenWhereScope().Call(jen.Id("db.Session(&gorm.Session{NewDB: true})")))
 		if v.XType.Pointer {
 
 			checkCodes = append(checkCodes, jen.Id("q."+strings.Join(v.Path, ".")).Op("==").Nil())

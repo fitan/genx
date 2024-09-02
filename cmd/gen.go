@@ -4,13 +4,15 @@ Copyright © 2023 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"os"
+
 	"github.com/fitan/genx/gen"
 	"github.com/fitan/genx/plugs/gormq"
 	"github.com/fitan/genx/plugs/log"
+	"github.com/fitan/genx/plugs/temporal"
 	"github.com/fitan/genx/plugs/trace"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slog"
-	"os"
 )
 
 // genCmd represents the gen command
@@ -33,6 +35,7 @@ to quickly create a Cobra application.`,
 		x.RegImpl(&log.Plug{})
 		x.RegImpl(&trace.Plug{})
 		x.RegStruct(&gormq.Plug{})
+		x.RegImpl(&temporal.Plug{})
 		x.Gen()
 	},
 }

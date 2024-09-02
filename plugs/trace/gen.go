@@ -23,7 +23,7 @@ func Gen(pkg *packages.Package, methods []common.InterfaceMethod) {
 	j.Add(funcList...)
 	j.Add(genNewTracing())
 
-	common.WriteGO("trace.go", j.GoString())
+	common.WriteGO("tracing.go", j.GoString())
 }
 
 func genTracingFunc(tracingPrefix string, method common.InterfaceMethod) jen.Code {
@@ -52,8 +52,8 @@ func genTracingFunc(tracingPrefix string, method common.InterfaceMethod) jen.Cod
 		}
 	}
 
-	jsonStatement := jen.Statement(jsonParamCode)
-	tracingParamStatement := jen.List(tracingParamCode...)
+	// jsonStatement := jen.Statement(jsonParamCode)
+	// tracingParamStatement := jen.List(tracingParamCode...)
 
 	for _, param := range method.Results {
 		methodResultCode = append(methodResultCode, jen.Id(param.Name).Id(param.ID))
@@ -63,57 +63,45 @@ func genTracingFunc(tracingPrefix string, method common.InterfaceMethod) jen.Cod
 		methodParamCode...,
 	).Params(
 		methodResultCode...,
-	).Block(
-		jen.List(jen.Id("span"), jen.Id("ctx")).Op(":=").Id("opentracing").Dot("StartSpanFromContextWithTracer").Call(
-			jen.Id("ctx"),
-			jen.Id("s").Dot("tracer"),
-			jen.Lit(method.Name),
-			jen.Id("opentracing").Dot("Tag").Values(jen.Id("Key").Op(":").Id("string").Call(
-				jen.Qual("github.com/opentracing/opentracing-go/ext", "Component")),
-				jen.Id("Value").Op(":").Lit(tracingPrefix),
-			),
-		),
-		jen.Defer().Func().Params().Block(
-			&jsonStatement,
-			jen.Id("span").Dot("LogKV").Call(
-				tracingParamStatement,
-				func() jen.Code {
-					if method.ReturnsError {
-						return jen.Lit("err").Op(",").Id("err")
-					}
-					return nil
-				}(),
-			),
-			func() jen.Code {
-				if method.ReturnsError {
-					return jen.Id("span").Dot("SetTag").Call(
-						jen.Id("string").Call(
-							jen.Id("ext").Dot("Error"),
-						),
-						jen.Id("err != nil"),
-					)
+	).BlockFunc(func(g *jen.Group) {
+		g.List(jen.Id("ctx"), jen.Id("span")).Op(":=").Id("s.tracer.Tracer").Call(jen.Lit(method.Name)).Dot("Start").Call(jen.Id("ctx"), jen.Lit(method.Name))
+		g.Defer().Func().Params().BlockFunc(func(g *jen.Group) {
+
+			g.Id("_params").Op(":=").Map(jen.String()).Interface().ValuesFunc(func(g *jen.Group) {
+				for _, v := range method.ParamsExcludeCtx() {
+					g.Lit(v.Name).Op(":").Add(jen.Id(v.Name))
 				}
-				return nil
-			}(),
-			jen.Id("span").Dot("Finish").Call(),
-		).Call(),
-		func() jen.Code {
-			if method.HasResults() {
-				return jen.Return().Id("s").Dot("next").Dot(method.Name).Call(
-					nextMethodParamCode...,
+			})
+			g.List(jen.Id("_paramsB"), jen.Id("_")).Op(":=").Qual("encoding/json", "Marshal").Call(jen.Id("_params"))
+
+			g.Id("span").Dot("SetAttributes").CallFunc(func(g *jen.Group) {
+				g.Id("attribute.String").Call(jen.Lit("params"), jen.Id("string(_paramsB)"))
+			})
+			if method.ReturnsError {
+				g.If(jen.Err().Op("!=").Nil()).Block(
+					jen.Id("span.RecordError").Call(jen.Id("err")),
+					jen.Id("span").Dot("SetStatus").Call(jen.Qual("go.opentelemetry.io/otel/codes", "Error"), jen.Id("err").Dot("Error").Call()),
 				)
 			}
-			return jen.Id("s").Dot("next").Dot(method.Name).Call(
+
+			g.Id("span.End()")
+		}).Call()
+		if method.HasResults() {
+			g.Return().Id("s").Dot("next").Dot(method.Name).Call(
 				nextMethodParamCode...,
 			)
-		}(),
-	).Line()
+		} else {
+			g.Id("s").Dot("next").Dot(method.Name).Call(
+				nextMethodParamCode...,
+			)
+		}
+	}).Line()
 }
 
 func genTracingStruct() jen.Code {
-	return jen.Null().Type().Id("tracing").Struct(jen.Id("next").Id("Service"), jen.Id("tracer").Qual("github.com/opentracing/opentracing-go", "Tracer"))
+	return jen.Null().Type().Id("tracing").Struct(jen.Id("next").Id("Service"), jen.Id("tracer").Id("*sdktrace.TracerProvider"))
 }
 
 func genNewTracing() jen.Code {
-	return jen.Func().Id("NewTracing").Params(jen.Id("otTracer").Id("opentracing").Dot("Tracer")).Params(jen.Id("Middleware")).Block(jen.Return().Func().Params(jen.Id("next").Id("Service")).Params(jen.Id("Service")).Block(jen.Return().Op("&").Id("tracing").Values(jen.Id("next").Op(":").Id("next"), jen.Id("tracer").Op(":").Id("otTracer"))))
+	return jen.Func().Id("NewTracing").Params(jen.Id("i").Id("do.Injector")).Params(jen.Id("Middleware")).Block(jen.Return().Func().Params(jen.Id("next").Id("Service")).Params(jen.Id("Service")).Block(jen.Return().Op("&").Id("tracing").Values(jen.Id("next").Op(":").Id("next"), jen.Id("tracer").Op(":").Id("do.MustInvoke[*sdktrace.TracerProvider](i)"))))
 }

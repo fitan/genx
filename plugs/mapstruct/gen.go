@@ -4,58 +4,87 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
+	"go/types"
+	"strings"
+
+	"log/slog"
+
 	"github.com/fitan/genx/common"
 	"github.com/samber/lo"
-	"go/types"
 	"golang.org/x/exp/slices"
-	"golang.org/x/exp/slog"
 	"golang.org/x/tools/go/types/typeutil"
-	"strings"
 
 	"github.com/fitan/jennifer/jen"
 	"golang.org/x/tools/go/packages"
 )
 
 const CopyTag = "copy"
-const structMapFormat = "@MapStructFormat"
-const MapTag = "@MapTag"
+
+const CopyPrefixTag = "@copy-prefix"
+const CopyNameTag = "@copy-name"
+const CopyMustTag = "@copy-must"
+const CopyTargetPathTag = "@copy-target-path"
+const CopyTargetNameTag = "@copy-target-name"
+const CopyTargetMethodTag = "@copy-target-method"
+const CopySoucePathTag = "@copy-source-path"
+const CopyAutoCastTag = "@copy-auto-cast"
 
 type Field struct {
 	Path []string
-	Name string
-	Type *common.Type
-	Doc  common.Doc
+	// 别名Path
+	AliasPath []string
+	Name      string
+	Type      *common.Type
+	ParentDoc common.Doc
+	Doc       common.Doc
 
-	HasMapTag bool
-	MapID     string
-	MapMust   bool
+	// doc
+	CopyPrefix       string
+	CopyName         string
+	CopyMust         bool
+	CopyTargetPath   string
+	CopyTargetName   string
+	CopyTargetMethod string
+	CopyAutoCast     bool
 }
 
-func (f *Field) ParseMapTag() {
-	var id, sourceMust string
-	if f.Doc.ByFuncNameAndArgs(MapTag, &id, &sourceMust) {
+func (f *Field) ParseDoc() {
+	var copyPrefix string
+	var copyName string
+	var copyMust bool
+	var copyTargetPath string
+	var copyTargetName string
+	var copyTargetMethod string
+	var copyAutoCast bool
 
-		f.HasMapTag = true
-		f.MapID = id
-		if sourceMust == "must" {
-			f.MapMust = true
-		}
+	f.ParentDoc.ByFuncNameAndArgs(CopyPrefixTag, &copyPrefix)
 
-		slog.Info("parseMapTag", "field", f.Name, "id", id, "sourceMust", sourceMust)
-	}
-	return
+	f.Doc.ByFuncNameAndArgs(CopyPrefixTag, &copyPrefix)
+	f.Doc.ByFuncNameAndArgs(CopyNameTag, &copyName)
+	copyMust = f.Doc.ByFuncNameAndArgs(CopyMustTag)
+	f.Doc.ByFuncNameAndArgs(CopyTargetPathTag, &copyTargetPath)
+	f.Doc.ByFuncNameAndArgs(CopyTargetNameTag, &copyTargetName)
+	f.Doc.ByFuncNameAndArgs(CopyTargetMethodTag, &copyTargetMethod)
+	copyAutoCast = f.Doc.ByFuncNameAndArgs(CopyAutoCastTag)
+
+	f.CopyPrefix = copyPrefix
+	f.CopyName = copyName
+	f.CopyMust = copyMust
+	f.CopyTargetPath = copyTargetPath
+	f.CopyTargetName = copyTargetName
+	f.CopyTargetMethod = copyTargetMethod
+	f.CopyAutoCast = copyAutoCast
 }
 
-func (f Field) CopyMethod() (s1, s2 string) {
-	var formatPkgName, formatFnName string
-	has := f.Doc.ByFuncNameAndArgs(structMapFormat, &formatPkgName, &formatFnName)
-	if has {
-		return formatPkgName, formatFnName
-	}
+// func (f Field) CopyMethod() (s1, s2 string) {
+// 	var formatPkgName, formatFnName string
+// 	has := f.Doc.ByFuncNameAndArgs(structMapFormat, &formatPkgName, &formatFnName)
+// 	if has {
+// 		return formatPkgName, formatFnName
+// 	}
 
-	return
-}
+// 	return
+// }
 
 func (f Field) SrcIdPath() *jen.Statement {
 	path := append([]string{"src"}, f.Path...)
@@ -91,13 +120,56 @@ type DataFieldMap struct {
 
 type OrderMap map[string]Field
 
-func (o OrderMap) GetByField(f Field) (Field, bool) {
-	fName := lo.Ternary(f.HasMapTag, f.MapID, f.Name)
-	for _, v := range o {
-		vName := lo.Ternary(v.HasMapTag, v.MapID, v.Name)
-		if fName == vName && slices.Equal(lo.DropRight(v.Path, 1), lo.DropRight(f.Path, 1)) {
-			return v, true
+func (o OrderMap) GetByField(f Field) (res Field, has bool) {
+	fName := lo.Ternary(lo.IsEmpty(f.CopyName), f.Name, f.CopyName)
+	fName = lo.Ternary(lo.IsEmpty(f.CopyPrefix), fName, strings.TrimPrefix(fName, f.CopyPrefix))
+
+	slog.Debug("getByField", "fName", fName, "path", strings.Join(f.Path, "."), "aliasPath", strings.Join(f.AliasPath, "."))
+	// 通过路径查找 最高优先级
+	if lo.IsNotEmpty(f.CopyTargetPath) {
+		for _, v := range o {
+			// slog.Info("copyTargetPath", "copyTargetPath", f.CopyTargetPath, "path", strings.Join(v.Path, "."))
+			if strings.Join(v.Path, ".") == f.CopyTargetPath {
+				res = v
+				has = true
+				return
+			}
 		}
+	}
+
+	if lo.IsNotEmpty(f.CopyTargetName) {
+		for _, v := range o {
+			// slog.Info("copyTargetName", "copyTargetName", f.CopyTargetName, "name", v.Name)
+			if f.CopyTargetName == v.Name {
+				res = v
+				has = true
+				return
+			}
+		}
+	}
+
+	// 通过名字查找 如果路径一样最高优先级 如果路径不一样名字一样也行
+	for _, v := range o {
+		vName := lo.Ternary(lo.IsEmpty(v.CopyName), v.Name, v.CopyName)
+		// slog.Info("getByField eq name", "fName", fName, "vName", vName, "sourceName", f.Name, "copyName", f.CopyName, "doc", f.Doc)
+		if fName == vName {
+			if slices.Equal(lo.DropRight(v.AliasPath, 1), lo.DropRight(f.AliasPath, 1)) {
+				res = v
+				has = true
+				// 最高优先级直接返回
+				return
+			}
+		}
+	}
+
+	// 次优先也可以
+	// if has == true {
+	// 	return
+	// }
+
+	if f.CopyMust {
+		slog.Error("字段未找到", "name", f.Name, "path", strings.Join(f.Path, "."))
+		panic("字段未找到")
 	}
 	return Field{}, false
 }
@@ -119,8 +191,7 @@ type MapMethod struct {
 	IsError  bool
 }
 
-func NewDataFieldMap(pkg *packages.Package, prefix []string, name string, commonType *common.Type) *DataFieldMap {
-	slog.Info("NewDataFieldMapTypeString", "str", commonType.T.String())
+func NewDataFieldMap(pkg *packages.Package, path []string, aliasPath []string, name string, commonType *common.Type) *DataFieldMap {
 	m := &DataFieldMap{
 		Pkg:           pkg,
 		Name:          name,
@@ -133,44 +204,42 @@ func NewDataFieldMap(pkg *packages.Package, prefix []string, name string, common
 		MapMethodList: []MapMethod{},
 	}
 	m.Parse(Field{
-		Path: prefix,
-		Name: name,
-		Type: commonType,
-		Doc:  nil,
+		Path:      path,
+		AliasPath: aliasPath,
+		Name:      "_root",
+		Type:      commonType,
+		Doc:       nil,
 	})
 
 	methodSet := typeutil.IntuitiveMethodSet(commonType.T, nil)
 	lo.ForEach(methodSet, func(item *types.Selection, index int) {
-		if strings.Contains(item.Obj().Name(), "GenXMap") {
-			slog.Info("find method", "id", item.Obj().Id(), "name", item.Obj().Name(), "type", item.Obj().Type().String())
-			sig := item.Type().(*types.Signature)
-			var paramList []string
-			var resultList []string
-			for i := 0; i < sig.Params().Len(); i++ {
-				paramList = append(paramList, sig.Params().At(i).Type().String())
-			}
-
-			for i := 0; i < sig.Results().Len(); i++ {
-				resultList = append(resultList, sig.Results().At(i).Type().String())
-			}
-
-			mapMethod := MapMethod{}
-			mapMethod.Name = item.Obj().Name()
-			if len(paramList) > 0 {
-				mapMethod.ParamID = paramList[0]
-			}
-			if lo.Contains(resultList, "error") {
-				mapMethod.IsError = true
-			}
-
-			m.MapMethodList = append(m.MapMethodList, mapMethod)
-			for i := 0; i < sig.RecvTypeParams().Len(); i++ {
-				rtp := sig.RecvTypeParams().At(i)
-				slog.Info("rtp", "string", rtp.String())
-				slog.Info("rtp", "constraint string", rtp.Constraint().String())
-				spew.Dump(rtp.Obj())
-			}
+		sig := item.Type().(*types.Signature)
+		var paramList []string
+		var resultList []string
+		for i := 0; i < sig.Params().Len(); i++ {
+			paramList = append(paramList, sig.Params().At(i).Type().String())
 		}
+
+		for i := 0; i < sig.Results().Len(); i++ {
+			resultList = append(resultList, sig.Results().At(i).Type().String())
+		}
+
+		mapMethod := MapMethod{}
+		mapMethod.Name = item.Obj().Name()
+		if len(paramList) > 0 {
+			mapMethod.ParamID = paramList[0]
+		}
+		if lo.Contains(resultList, "error") {
+			mapMethod.IsError = true
+		}
+
+		m.MapMethodList = append(m.MapMethodList, mapMethod)
+		// for i := 0; i < sig.RecvTypeParams().Len(); i++ {
+		// 	rtp := sig.RecvTypeParams().At(i)
+		// 	slog.Info("rtp", "string", rtp.String())
+		// 	slog.Info("rtp", "constraint string", rtp.Constraint().String())
+		// 	spew.Dump(rtp.Obj())
+		// }
 	})
 	return m
 }
@@ -197,10 +266,16 @@ func (d *DataFieldMap) saveField(m map[string]Field, name string, field Field) {
 
 // func (d *DataFieldMap) Parse(prefix []string, name string, t types.Type, doc *ast.CommentGroup) {
 func (d *DataFieldMap) Parse(f Field) {
-	(&f).ParseMapTag()
+	(&f).ParseDoc()
 	switch v := f.Type.T.(type) {
 	case *types.Pointer:
-		d.saveField(d.PointerMap, f.Name, f)
+		d.Parse(Field{
+			Name:      f.Name,
+			Type:      common.TypeOf(f.Type.PointerType.Elem()),
+			Path:      f.Path,
+			AliasPath: f.AliasPath,
+			Doc:       f.Doc,
+		})
 	case *types.Basic:
 		d.saveField(d.BasicMap, f.Name, f)
 		return
@@ -208,48 +283,44 @@ func (d *DataFieldMap) Parse(f Field) {
 		d.saveField(d.MapMap, f.Name, f)
 		return
 	case *types.Slice:
+		slog.Info("slice", "name", f.Name)
 		d.saveField(d.SliceMap, f.Name, f)
 		return
 	case *types.Array:
 	case *types.Named:
 		d.Parse(Field{
-			Name: f.Name,
-			Type: common.TypeOf(v.Underlying()),
-			Path: f.Path,
-			Doc:  f.Doc,
+			Name:      f.Name,
+			Type:      common.TypeOf(v.Underlying()),
+			Path:      f.Path,
+			AliasPath: f.AliasPath,
+			Doc:       f.Doc,
 		})
 		return
 	case *types.Struct:
 		for i := 0; i < v.NumFields(); i++ {
 			field := v.Field(i)
-			if !field.Exported() {
-				continue
-			}
+			// if !field.Exported() {
+			// 	continue
+			// }
 			indexName := field.Name()
-			//tagMust := false
-			//tag, ok := reflect.StructTag(v.Tag(i)).Lookup(CopyTag)
-			//if ok {
-			//	tags := strings.Split(tag, ",")
-			//	tagName := tags[0]
-			//	if tagName != "" {
-			//		indexName = tagName
-			//	}
-			//	if tags[1] == "must" {
-			//		tagMust = true
-			//	}
-			//}
 			fieldDoc := common.GetCommentByTokenPos(d.Pkg, field.Pos())
 			parseDoc, err := common.ParseDoc(fieldDoc.Text())
 			if err != nil {
 				slog.Error("parseDoc err", "err", err, "doc", parseDoc)
 				panic(err)
 			}
+			var aliasName string
+			parseDoc.ByFuncNameAndArgs(CopyNameTag, &aliasName)
+			if lo.IsEmpty(aliasName) {
+				aliasName = field.Name()
+			}
 			d.Parse(Field{
-				Path: append(f.Path[0:], field.Name()),
-				Name: indexName,
-				//TagMust: tagMust,
-				Type: common.TypeOf(field.Type()),
-				Doc:  parseDoc,
+				Path:      append(f.Path[0:], field.Name()),
+				AliasPath: append(f.AliasPath[0:], aliasName),
+				Name:      indexName,
+				Type:      common.TypeOf(field.Type()),
+				ParentDoc: f.Doc,
+				Doc:       parseDoc,
 			})
 		}
 		return
@@ -336,8 +407,8 @@ func (d *Copy) SumPath() string {
 
 func (d *Copy) Doc() *jen.Statement {
 	code := make(jen.Statement, 0)
-	code = append(code, jen.Comment("parentPath: "+strings.Join(d.SrcParentPath, ".")+":"+strings.Join(d.DestParentPath, ".")))
-	code = append(code, jen.Comment("path: "+strings.Join(d.SrcPath, ".")+":"+strings.Join(d.DestPath, ".")))
+	// code = append(code, jen.Comment("parentPath: "+strings.Join(d.SrcParentPath, ".")+":"+strings.Join(d.DestParentPath, ".")))
+	// code = append(code, jen.Comment("path: "+strings.Join(d.SrcPath, ".")+":"+strings.Join(d.DestPath, ".")))
 	return &code
 }
 
@@ -346,11 +417,23 @@ func (d *Copy) SumParentPath() string {
 }
 
 func (d *Copy) Gen() {
+	slog.Debug("gen fn name: ", "fnName", d.FnName())
+	slog.Debug("basic map: ", "srcKeys", d.Src.BasicMap.OrderKeys(), "descKeys", d.Dest.BasicMap.OrderKeys())
+	slog.Debug("map map: ", "srcKeys", d.Src.MapMap.OrderKeys(), "descKeys", d.Dest.MapMap.OrderKeys())
+	slog.Debug("slice map: ", "srcKeys", d.Src.SliceMap.OrderKeys(), "descKeys", d.Dest.SliceMap.OrderKeys())
+	slog.Debug("pointer map: ", "srcKeys", d.Src.PointerMap.OrderKeys(), "descKeys", d.Dest.PointerMap.OrderKeys())
 	has, fn := d.GenFn(d.FnName(), d.Src.Type.TypeAsJenComparePkgName(d.Pkg), d.Dest.Type.TypeAsJenComparePkgName(d.Pkg))
 	if has {
 		return
 	}
 	bind := make(jen.Statement, 0)
+	if d.Src.Type.Pointer {
+		bind = append(bind, jen.Id("if src == nil { return }"))
+	}
+
+	if d.Dest.Type.Pointer {
+		bind = append(bind, jen.Id("dest = new").Call(common.TypeOf(d.Dest.Type.PointerType.Elem()).TypeAsJenComparePkgName(d.Pkg)))
+	}
 	bind = append(bind, jen.Comment("basic map"))
 	bind = append(bind, d.GenBasic()...)
 	bind = append(bind, jen.Comment("slice map"))
@@ -372,13 +455,14 @@ func (d *Copy) Gen() {
 }
 
 func (d *Copy) GenExtraCopyMethod(bind *jen.Statement, destV, srcV Field) (has bool) {
-	pkgName, methodName := destV.CopyMethod()
-	if pkgName == "" && methodName == "" {
-		return false
-	}
+	// pkgName, methodName := destV.CopyMethod()
+	// if pkgName == "" && methodName == "" {
+	// 	return false
+	// }
 
-	bind.Add(destV.DestIdPath().Op("=").Add(jen.Qual(pkgName, methodName).Call(srcV.SrcIdPath())))
-	return true
+	// bind.Add(destV.DestIdPath().Op("=").Add(jen.Qual(pkgName, methodName).Call(srcV.SrcIdPath())))
+	// return true
+	return false
 
 }
 
@@ -386,19 +470,18 @@ func (d *Copy) GenBasic() jen.Statement {
 	bind := make(jen.Statement, 0)
 	for _, k := range d.Dest.BasicMap.OrderKeys() {
 		v := d.Dest.BasicMap[k]
-		srcV, ok := d.Src.BasicMap.GetByField(v)
-		if !ok {
-			//if !must {
-			//	slog.Error("not found", "name", v.Name, "path", sourceID)
-			//	panic("not found")
-			//}
+
+		if !lo.IsEmpty(v.CopyTargetMethod) {
+			// bind = append(bind, jen.Comment("source: "+v.SrcIdPath().GoString()+" target: "+v.CopyTargetMethod+"()"))
+			bind.Add(v.DestIdPath().Op("=").Id("src." + v.CopyTargetMethod + "()"))
 			continue
 		}
 
-		//if v.Doc != nil {
-		//	bind.Add(jen.Comment(v.Doc.Text()))
-		//}
-		//
+		srcV, ok := d.Src.BasicMap.GetByField(v)
+		if !ok {
+			continue
+		}
+
 		if d.GenExtraCopyMethod(&bind, v, srcV) {
 			continue
 		}
@@ -407,7 +490,7 @@ func (d *Copy) GenBasic() jen.Statement {
 		//	bind.Add(v.DestIdPath().Op("=").Add(dtoMethod.Call(srcV.SrcIdPath())))
 		//	continue
 		//}
-		bind = append(bind, jen.Comment("source: "+v.SrcIdPath().GoString()+" target: "+v.DestIdPath().GoString()))
+		// bind = append(bind, jen.Comment("source: "+v.SrcIdPath().GoString()+" target: "+v.DestIdPath().GoString()))
 		bind.Add(v.DestIdPath().Op("=").Add(srcV.SrcIdPath()))
 	}
 	return bind
@@ -430,6 +513,7 @@ func (d *Copy) GenMap() jen.Statement {
 			continue
 		}
 
+		// 类型一样 直接=
 		if v.Type.T.String() == srcV.Type.T.String() {
 			bind.Add(v.DestIdPath().Op("=").Add(srcV.SrcIdPath()))
 			continue
@@ -450,10 +534,10 @@ func (d *Copy) GenMap() jen.Statement {
 				Recorder:       d.Recorder,
 				SrcParentPath:  append(d.SrcParentPath, srcV.Path...),
 				SrcPath:        append([]string{}, srcV.Path...),
-				Src:            NewDataFieldMap(d.Pkg, []string{}, srcName, srcMapValue),
+				Src:            NewDataFieldMap(d.Pkg, []string{}, []string{}, srcName, srcMapValue),
 				DestParentPath: append(d.DestParentPath, v.Path...),
 				DestPath:       append([]string{}, v.Path...),
-				Dest:           NewDataFieldMap(d.Pkg, []string{}, destName, destMapValue),
+				Dest:           NewDataFieldMap(d.Pkg, []string{}, []string{}, destName, destMapValue),
 				Nest:           make([]*Copy, 0),
 				StructName:     d.StructName,
 			}
@@ -486,7 +570,6 @@ func (d *Copy) GenPointer() jen.Statement {
 		v := d.Dest.PointerMap[key]
 		srcV, ok := d.Src.PointerMap.GetByField(v)
 		if !ok {
-			fmt.Printf("not found %s in %s\n", v.Name, d.SumPath())
 			continue
 		}
 
@@ -516,10 +599,10 @@ func (d *Copy) GenPointer() jen.Statement {
 				Recorder:       d.Recorder,
 				SrcParentPath:  append(d.SrcParentPath, srcV.Path...),
 				SrcPath:        append([]string{}, srcV.Path...),
-				Src:            NewDataFieldMap(d.Pkg, []string{}, srcName, srcLiner),
+				Src:            NewDataFieldMap(d.Pkg, []string{}, []string{}, srcName, srcLiner),
 				DestParentPath: append(d.DestParentPath, v.Path...),
 				DestPath:       append([]string{}, v.Path...),
-				Dest:           NewDataFieldMap(d.Pkg, []string{}, destName, destLiner),
+				Dest:           NewDataFieldMap(d.Pkg, []string{}, []string{}, destName, destLiner),
 				Nest:           make([]*Copy, 0),
 				StructName:     d.StructName,
 			}
@@ -542,7 +625,6 @@ func (d *Copy) GenSlice() jen.Statement {
 		v := d.Dest.SliceMap[key]
 		srcV, ok := d.Src.SliceMap.GetByField(v)
 		if !ok {
-			fmt.Printf("not found %s in %s\n", v.Name, d.SumPath())
 			continue
 		}
 		//if v.Doc != nil {
@@ -575,11 +657,11 @@ func (d *Copy) GenSlice() jen.Statement {
 				SrcParentPath: append(d.SrcParentPath, srcV.Path...),
 				//SrcPath:  append([]string{}, srcV.Path...),
 				SrcPath:        d.SrcPath[0:],
-				Src:            NewDataFieldMap(d.Pkg, []string{}, srcName, srcLiner),
+				Src:            NewDataFieldMap(d.Pkg, []string{}, []string{}, srcName, srcLiner),
 				DestParentPath: append(d.DestParentPath, v.Path...),
 				//DestPath: append([]string{}, v.Path...),
 				DestPath:   d.DestPath[0:],
-				Dest:       NewDataFieldMap(d.Pkg, []string{}, destName, destLiner),
+				Dest:       NewDataFieldMap(d.Pkg, []string{}, []string{}, destName, destLiner),
 				Nest:       make([]*Copy, 0),
 				StructName: d.StructName,
 			}
