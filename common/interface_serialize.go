@@ -17,9 +17,10 @@ func NewInterfaceSerialize(pkg *packages.Package) *InterfaceSerialize {
 	return &InterfaceSerialize{pkg: pkg}
 }
 
-func (i *InterfaceSerialize) Parse(it *types.Interface) (InterfaceMetaDate, error) {
+func (i *InterfaceSerialize) Parse(it *types.Interface, doc *Doc) (InterfaceMetaDate, error) {
 	impl := InterfaceMetaDate{
 		Methods: make([]InterfaceMethod, 0),
+		Doc:     doc,
 	}
 
 	for n := 0; n < it.NumMethods(); n++ {
