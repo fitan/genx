@@ -146,13 +146,18 @@ type PhysicalMachine struct {
 	//PhysicalMachineAllocation *PhysicalMachineAllocation `gorm:"foreignKey:PhysicalMachineUUID;references:UUID" json:"physicalMachineAllocation"`
 }
 
+// @crud id
+// @crud-update-method(name="updateStatus", fields=["Status","IpmiIp","Env"])
+// @crud-update(name="updateOsBrandUUID", fields="OsBrandUUID")
 type PmChangeLog struct {
 	gorm.Model
 	// 物理机UUID
+	// @crud-list-op = >=
 	UUID string `gorm:"column:uuid;notnull;comment:'物理机UUID'" json:"physicalMachineUUID"`
 	// sn
 	Sn string `gorm:"column:sn;comment:'sn'" json:"sn"`
 	// 业务ip
+	// @crud-where
 	BusinessIp string `gorm:"column:business_ip;comment:'业务ip'" json:"businessIp"`
 	// 业务子网掩码
 	BusinessSubnetMask string `gorm:"column:business_subnet_mask;comment:'业务子网掩码'" json:"businessSubnetMask"`
