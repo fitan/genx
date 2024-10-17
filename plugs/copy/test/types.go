@@ -3,6 +3,7 @@ package test
 import (
 	"fmt"
 
+	"github.com/samber/lo"
 	"gorm.io/gorm"
 )
 
@@ -17,25 +18,35 @@ func testCopy() {
 	} */
 
 	// @copy
-	target = stCopy(source)
+	stCopy(&target, &source)
 
 	var sliceSource []NginxDomain
 	var sliceTarget []NginxBody
 
-	// @copy
-	sliceTarget = sliceStCopy(sliceSource)
+	lo.ForEach(sliceSource, func(item NginxDomain, index int) {
+		var nginxBody NginxBody
+		// @copy
+		nginxDomain2NginxBodyDTO(&nginxBody, &item)
+		sliceTarget = append(sliceTarget, nginxBody)
+	})
+	// sliceStCopy(&sliceTarget, &sliceSource)
 
 	var mapSource map[string]NginxDomain
 	var mapTarget map[string]NginxBody
 
-	// @copy
-	mapTarget = mapStCopy(mapSource)
+	// mapStCopy(&mapTarget, &mapSource)
+	for k, v := range mapSource {
+		var nginxBody NginxBody
+		// @copy
+		nginxDomain2NginxBodyDTO(&nginxBody, &v)
+		mapTarget[k] = nginxBody
+	}
 
-	var sliceLabelSource []Label
+	// var sliceLabelSource []Label
 	var sliceSelectTarget []Select
 
 	// @copy
-	sliceSelectTarget = sliceLabelCopy(sliceLabelSource)
+	// sliceLabelCopy(&sliceSelectTarget, &sliceLabelSource)
 
 	fmt.Println(target)
 	fmt.Println(sliceTarget)

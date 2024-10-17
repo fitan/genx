@@ -37,6 +37,7 @@ type Field struct {
 	Type      *common.Type
 	ParentDoc common.Doc
 	Doc       common.Doc
+	IsNamed   bool
 
 	// doc
 	CopyPrefix       string
@@ -283,7 +284,6 @@ func (d *DataFieldMap) Parse(f Field) {
 		d.saveField(d.MapMap, f.Name, f)
 		return
 	case *types.Slice:
-		slog.Info("slice", "name", f.Name)
 		d.saveField(d.SliceMap, f.Name, f)
 		return
 	case *types.Array:
@@ -294,14 +294,16 @@ func (d *DataFieldMap) Parse(f Field) {
 			Path:      f.Path,
 			AliasPath: f.AliasPath,
 			Doc:       f.Doc,
+			IsNamed:   true,
 		})
 		return
 	case *types.Struct:
 		for i := 0; i < v.NumFields(); i++ {
 			field := v.Field(i)
-			// if !field.Exported() {
-			// 	continue
-			// }
+
+			if !field.Exported() {
+				continue
+			}
 			indexName := field.Name()
 			fieldDoc := common.GetCommentByTokenPos(d.Pkg, field.Pos())
 			parseDoc, err := common.ParseDoc(fieldDoc.Text())
@@ -314,9 +316,15 @@ func (d *DataFieldMap) Parse(f Field) {
 			if lo.IsEmpty(aliasName) {
 				aliasName = field.Name()
 			}
+			var path []string
+			var aliasPath []string
+			if !field.Embedded() {
+				path = append(f.Path[0:], field.Name())
+				aliasPath = append(f.AliasPath[0:], aliasName)
+			}
 			d.Parse(Field{
-				Path:      append(f.Path[0:], field.Name()),
-				AliasPath: append(f.AliasPath[0:], aliasName),
+				Path:      path,
+				AliasPath: aliasPath,
 				Name:      indexName,
 				Type:      common.TypeOf(field.Type()),
 				ParentDoc: f.Doc,
@@ -395,6 +403,7 @@ type Copy struct {
 	Nest           []*Copy
 	DefaultFn      *jen.Statement
 	StructName     string
+	Head           bool
 }
 
 func (d *Copy) FnName() string {
@@ -431,9 +440,13 @@ func (d *Copy) Gen() {
 		bind = append(bind, jen.Id("if src == nil { return }"))
 	}
 
-	if d.Dest.Type.Pointer {
+	// 为了不改变外面的指针所以不需要New
+	if !d.Head && d.Dest.Type.Pointer {
 		bind = append(bind, jen.Id("dest = new").Call(common.TypeOf(d.Dest.Type.PointerType.Elem()).TypeAsJenComparePkgName(d.Pkg)))
 	}
+	// if d.Dest.Type.Pointer {
+	// bind = append(bind, jen.Id("dest = new").Call(common.TypeOf(d.Dest.Type.PointerType.Elem()).TypeAsJenComparePkgName(d.Pkg)))
+	// }
 	bind = append(bind, jen.Comment("basic map"))
 	bind = append(bind, d.GenBasic()...)
 	bind = append(bind, jen.Comment("slice map"))
