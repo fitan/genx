@@ -2,14 +2,15 @@ package common
 
 import (
 	"fmt"
+	"go/ast"
+	"go/token"
+	"strings"
+
 	"github.com/antlr4-go/antlr/v4"
 	"github.com/cockroachdb/errors"
 	"github.com/fitan/genx/parser"
 	"github.com/samber/lo"
-	"go/ast"
-	"go/token"
 	"golang.org/x/tools/go/packages"
-	"strings"
 )
 
 type Doc []DocLine
@@ -129,17 +130,17 @@ func (c *CustomErrorListener) SyntaxError(recognizer antlr.Recognizer, offending
 func GetCommentByTokenPos(pkg *packages.Package, pos token.Pos) *ast.CommentGroup {
 	fieldFileName := pkg.Fset.Position(pos).Filename
 	fieldLine := pkg.Fset.Position(pos).Line
-	var fieldComment *ast.CommentGroup
+	fieldComment := ast.CommentGroup{}
 	for _, syntax := range pkg.Syntax {
 		fileName := pkg.Fset.Position(syntax.Pos()).Filename
 		if fieldFileName == fileName {
 			for _, c := range syntax.Comments {
 				if pkg.Fset.Position(c.End()).Line+1 == fieldLine {
-					fieldComment = c
+					fieldComment = *c
 				}
 			}
 			break
 		}
 	}
-	return fieldComment
+	return &fieldComment
 }

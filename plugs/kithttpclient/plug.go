@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"path/filepath"
 
 	"github.com/fitan/genx/common"
 	"github.com/fitan/genx/gen"
@@ -30,7 +31,7 @@ func (s Plug) Gen(option gen.Option, implGoTypeMetes []gen.InterfaceGoTypeMeta) 
 
 	kitHttpClient.Gen(j)
 
-	common.WriteGO("kit_http_client.go", j.GoString())
+	common.WriteGO(filepath.Join(option.Dir, "kit_http_client.go"), j.GoString())
 	return nil
 
 }

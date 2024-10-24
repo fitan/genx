@@ -1,6 +1,8 @@
 package log
 
 import (
+	"path/filepath"
+
 	"github.com/fitan/genx/common"
 	"github.com/fitan/genx/gen"
 	"golang.org/x/exp/slog"
@@ -24,7 +26,10 @@ func (p *Plug) Gen(option gen.Option, implGoTypeMetes []gen.InterfaceGoTypeMeta)
 			return err
 		}
 
-		Gen(option.Pkg, meta.Methods)
+		f := Gen(option.Pkg, meta.Methods)
+		
+		common.WriteGO(filepath.Join(option.Dir,"logging.go"), f)
+
 	}
 	return nil
 }

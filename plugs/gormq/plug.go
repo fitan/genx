@@ -2,10 +2,12 @@ package gormq
 
 import (
 	"fmt"
+	"path/filepath"
+	"strings"
+
 	"github.com/fitan/genx/common"
 	"github.com/fitan/genx/gen"
 	"github.com/fitan/jennifer/jen"
-	"strings"
 )
 
 const FuncName = "@gq"
@@ -77,6 +79,7 @@ func (p *Plug) Name() string {
 
 func (p *Plug) Gen(option gen.Option, implGoTypeMetes []gen.StructGoTypeMeta) (err error) {
 	j := jen.NewFile(option.Pkg.Name)
+	j.AddImport("gorm.io/gorm", "")
 	for _, v := range option.Imports {
 		if v.Name != nil {
 			j.AddImport(strings.Trim(v.Path.Value, `"`), strings.Trim(v.Name.String(), `"`))
@@ -105,6 +108,6 @@ func (p *Plug) Gen(option gen.Option, implGoTypeMetes []gen.StructGoTypeMeta) (e
 	//}
 
 	Gen(j, option, implGoTypeMetes)
-	common.WriteGO("gorm_scope.go", j.GoString())
+	common.WriteGO(filepath.Join(option.Dir, "gorm_scope.go"), j.GoString())
 	return
 }

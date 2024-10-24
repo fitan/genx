@@ -7,7 +7,7 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-func Gen(pkg *packages.Package, methods []common.InterfaceMethod) {
+func Gen(pkg *packages.Package, methods []common.InterfaceMethod) string {
 	slog.Info("gen logging", slog.Any("pkg", pkg), slog.Any("methods", methods))
 	j := jen.NewFile(pkg.Name)
 	j.AddImport("github.com/samber/do/v2", "do")
@@ -23,7 +23,7 @@ func Gen(pkg *packages.Package, methods []common.InterfaceMethod) {
 
 	j.Add(funcList...)
 	j.Add(genNewLogging(pkg.PkgPath))
-	common.WriteGO("logging.go", j.GoString())
+	return j.GoString()
 
 }
 

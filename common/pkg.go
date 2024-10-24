@@ -2,10 +2,12 @@ package common
 
 import (
 	"fmt"
-	"golang.org/x/tools/go/packages"
+	"path/filepath"
 	"strings"
+
+	"golang.org/x/exp/slog"
+	"golang.org/x/tools/go/packages"
 )
-import "golang.org/x/exp/slog"
 
 const mode packages.LoadMode = packages.NeedName |
 	packages.NeedTypes |
@@ -17,7 +19,7 @@ const mode packages.LoadMode = packages.NeedName |
 	//packages.NeedDeps |
 	packages.NeedFiles
 
-func LoadPkg(path string) (*packages.Package, error) {
+func LoadPkg(path string) ([]*packages.Package, error) {
 	slog.Info("load pkg", slog.String("path", path))
 	cfg := &packages.Config{Mode: mode}
 	pkgs, err := packages.Load(cfg, path)
@@ -31,10 +33,21 @@ func LoadPkg(path string) (*packages.Package, error) {
 		return nil, fmt.Errorf("len(pkgs) < 1")
 	}
 
-	return pkgs[0], nil
+	return pkgs, nil
 }
 
 func Last2DirName(s string) string {
-	pathList := strings.Split(s, "/")
-	return strings.Join(pathList[len(pathList)-2:len(pathList)-1], ".")
+	s = filepath.Clean(s)
+	components := strings.Split(s, string(filepath.Separator))
+
+	cLen := len(components)
+	if cLen <= 1 {
+		return components[0]
+	}
+
+	if cLen >= 2 {
+		return components[cLen-2] + "." + components[cLen-1]
+	}
+
+	return ""
 }

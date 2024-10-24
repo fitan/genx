@@ -7,7 +7,7 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-func Gen(pkg *packages.Package, methods []common.InterfaceMethod) {
+func Gen(pkg *packages.Package, methods []common.InterfaceMethod) string {
 	slog.Info("gen tracing", slog.Any("pkg", pkg), slog.Any("methods", methods))
 	j := jen.NewFile(pkg.Name)
 	common.JenAddImports(pkg, j)
@@ -23,7 +23,7 @@ func Gen(pkg *packages.Package, methods []common.InterfaceMethod) {
 	j.Add(funcList...)
 	j.Add(genNewTracing())
 
-	common.WriteGO("tracing.go", j.GoString())
+	return j.GoString()
 }
 
 func genTracingFunc(tracingPrefix string, method common.InterfaceMethod) jen.Code {

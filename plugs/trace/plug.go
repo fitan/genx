@@ -1,6 +1,8 @@
 package trace
 
 import (
+	"path/filepath"
+
 	"github.com/fitan/genx/common"
 	"github.com/fitan/genx/gen"
 	"golang.org/x/exp/slog"
@@ -17,13 +19,15 @@ func (p *Plug) Gen(option gen.Option, implGoTypeMetes []gen.InterfaceGoTypeMeta)
 
 	parseImpl := common.NewInterfaceSerialize(option.Pkg)
 	for _, v := range implGoTypeMetes {
-		meta, err := parseImpl.Parse(v.Obj,&v.Doc)
+		meta, err := parseImpl.Parse(v.Obj, &v.Doc)
 		if err != nil {
 			slog.Error("parseImpl.Parse", err, slog.String("name", v.Obj.String()))
 			return err
 		}
 
-		Gen(option.Pkg, meta.Methods)
+		f := Gen(option.Pkg, meta.Methods)
+
+		common.WriteGO(filepath.Join(option.Dir, "trace.go"), f)
 	}
 	return nil
 }

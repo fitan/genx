@@ -3,13 +3,17 @@ package gen
 import (
 	"log/slog"
 	"os"
+	"time"
+
+	"github.com/MatusOllah/slogcolor"
+	"github.com/fatih/color"
 )
 
 func init() {
 	level := os.Getenv("slogLevel")
 	slog.Info("slogLevel", slog.String("level", level))
 
-	defaultLevel := slog.LevelInfo
+	defaultLevel := slog.LevelError
 	if level != "" {
 		switch level {
 		case "debug":
@@ -22,7 +26,16 @@ func init() {
 			defaultLevel = slog.LevelError
 		}
 	}
-	handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{AddSource: true, Level: defaultLevel})
-	log := slog.New(handler)
+	// handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{AddSource: true, Level: defaultLevel})
+	log := slog.New(slogcolor.NewHandler(os.Stdout, &slogcolor.Options{
+		Level:         defaultLevel,
+		TimeFormat:    time.DateTime,
+		SrcFileMode:   slogcolor.ShortFile,
+		SrcFileLength: 0,
+		MsgPrefix:     color.HiWhiteString("| "),
+		MsgLength:     0,
+		MsgColor:      color.New(),
+		NoColor:       false,
+	}))
 	slog.SetDefault(log)
 }

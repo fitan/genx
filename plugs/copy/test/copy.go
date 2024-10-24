@@ -11,8 +11,16 @@ func (d stCopyCopy) Copy(dest *NginxBody, src *NginxDomain) {
 	if src == nil {
 		return
 	}
+	// named map
+	dest.Model = src.Model
 	// basic map
 	dest.Cluster = src.Cluster
+	dest.ConfDomain = src.Conf.Domain
+	dest.Domain = src.Domain
+	dest.Product = src.Product
+	dest.Project = src.Project
+	dest.ProjectCname = src.GetName()
+	dest.ProjectID = src.ProjectID
 	dest.Conf.ClientMaxBodySize = src.Conf.ClientMaxBodySize
 	dest.Conf.Domain = src.Conf.Domain
 	dest.Conf.Enable = src.Conf.Enable
@@ -25,13 +33,15 @@ func (d stCopyCopy) Copy(dest *NginxBody, src *NginxDomain) {
 	dest.Conf.SSLOn = src.Conf.SSLOn
 	dest.Conf.Server = src.Conf.Server
 	dest.Conf.ServiceType = src.Conf.ServiceType
-	dest.ConfDomain = src.Conf.Domain
-	dest.Domain = src.Domain
-	dest.Product = src.Product
-	dest.Project = src.Project
-	dest.ProjectCname = src.GetName()
-	dest.ProjectID = src.ProjectID
 	// slice map
+	dest.SliceStruct = make([]Password2, 0, len(src.SliceStruct))
+	for i := 0; i < len(src.SliceStruct); i++ {
+		dest.SliceStruct[i] = d.pTestPasswordToTestPassword2(src.SliceStruct[i])
+	}
+	dest.SliceStruct2 = make([]*Password2, 0, len(src.SliceStruct2))
+	for i := 0; i < len(src.SliceStruct2); i++ {
+		dest.SliceStruct2[i] = d.testPasswordToPTestPassword2(src.SliceStruct2[i])
+	}
 	dest.Conf.Listens = src.Conf.Listens
 	dest.Conf.ListensSSL = src.Conf.ListensSSL
 	dest.Conf.Locations = make([]LocationItem, 0, len(src.Conf.Locations))
@@ -41,14 +51,6 @@ func (d stCopyCopy) Copy(dest *NginxBody, src *NginxDomain) {
 	dest.Conf.UpstreamItems = make([]UpstreamItem, 0, len(src.Conf.UpstreamItems))
 	for i := 0; i < len(src.Conf.UpstreamItems); i++ {
 		dest.Conf.UpstreamItems[i] = d.testNginxDomainUpstreamItemToTestUpstreamItem(src.Conf.UpstreamItems[i])
-	}
-	dest.SliceStruct = make([]Password2, 0, len(src.SliceStruct))
-	for i := 0; i < len(src.SliceStruct); i++ {
-		dest.SliceStruct[i] = d.pTestPasswordToTestPassword2(src.SliceStruct[i])
-	}
-	dest.SliceStruct2 = make([]*Password2, 0, len(src.SliceStruct2))
-	for i := 0; i < len(src.SliceStruct2); i++ {
-		dest.SliceStruct2[i] = d.testPasswordToPTestPassword2(src.SliceStruct2[i])
 	}
 	// map map
 	dest.Map = src.Map
@@ -64,34 +66,88 @@ func (d stCopyCopy) Copy(dest *NginxBody, src *NginxDomain) {
 	// method map
 	return
 }
+func (d stCopyCopy) pTestPasswordToTestPassword2(src *Password) (dest Password2) {
+	if src == nil {
+		return
+	}
+	// named map
+	// basic map
+	dest.PasswordName = src.PasswordName
+	dest.Nest.Ipone1 = src.Nest.Ipone
+	// slice map
+	dest.NestSlice = make([]Password2Nest, 0, len(src.NestSlice))
+	for i := 0; i < len(src.NestSlice); i++ {
+		dest.NestSlice[i] = d.testPasswordNestToTestPassword2Nest(src.NestSlice[i])
+	}
+	// map map
+	dest.NestMap = make(map[string]Password2Nest, len(src.NestMap))
+	for key, value := range src.NestMap {
+		dest.NestMap[key] = d.testPasswordNestToTestPassword2Nest(value)
+	}
+	// pointer map
+	// method map
+	return
+}
+func (d stCopyCopy) testPasswordNestToTestPassword2Nest(src PasswordNest) (dest Password2Nest) {
+	// named map
+	// basic map
+	dest.Ipone1 = src.Ipone
+	// slice map
+	// map map
+	// pointer map
+	// method map
+	return
+}
+func (d stCopyCopy) testPasswordToPTestPassword2(src Password) (dest *Password2) {
+	dest = new(Password2)
+	// named map
+	// basic map
+	dest.PasswordName = src.PasswordName
+	dest.Nest.Ipone1 = src.Nest.Ipone
+	// slice map
+	dest.NestSlice = make([]Password2Nest, 0, len(src.NestSlice))
+	for i := 0; i < len(src.NestSlice); i++ {
+		dest.NestSlice[i] = d.testPasswordNestToTestPassword2Nest(src.NestSlice[i])
+	}
+	// map map
+	dest.NestMap = make(map[string]Password2Nest, len(src.NestMap))
+	for key, value := range src.NestMap {
+		dest.NestMap[key] = d.testPasswordNestToTestPassword2Nest(value)
+	}
+	// pointer map
+	// method map
+	return
+}
 func (d stCopyCopy) testNginxDomainLocationItemToTestLocationItem(src NginxDomainLocationItem) (dest LocationItem) {
+	// named map
+	dest.Huidu.ArgsHuidu = src.Huidu.ArgsHuidu
+	dest.Huidu.HeaderHuidu = src.Huidu.HeaderHuidu
+	dest.Huidu.IPHuidu = src.Huidu.IPHuidu
 	// basic map
 	dest.ConfID = src.ConfID
 	dest.HeaderHost = src.HeaderHost
+	dest.Key = src.Key
+	dest.Rewrite = src.Rewrite
+	dest.SubDirectoryPath = src.SubDirectoryPath
+	dest.UpstreamName = src.UpstreamName
 	dest.Huidu.Enable = src.Huidu.Enable
 	dest.Huidu.HuiduKey = src.Huidu.HuiduKey
 	dest.Huidu.Upstream = src.Huidu.Upstream
 	dest.Huidu.Upstreamhuidu = src.Huidu.Upstreamhuidu
-	dest.Key = src.Key
 	dest.LimitConnZone.Enable = src.LimitConnZone.Enable
 	dest.LimitConnZone.PerServer = src.LimitConnZone.PerServer
 	dest.LimitReqZone.Burst = src.LimitReqZone.Burst
 	dest.LimitReqZone.Enable = src.LimitReqZone.Enable
 	dest.LimitReqZone.Zone = src.LimitReqZone.Zone
-	dest.Rewrite = src.Rewrite
-	dest.SubDirectoryPath = src.SubDirectoryPath
-	dest.UpstreamName = src.UpstreamName
 	// slice map
-	dest.Huidu.ArgsHuidu.Args = src.Huidu.ArgsHuidu.Args
 	dest.Huidu.Content = src.Huidu.Content
-	dest.Huidu.HeaderHuidu.Header = src.Huidu.HeaderHuidu.Header
-	dest.Huidu.IPHuidu.Ips = src.Huidu.IPHuidu.Ips
 	// map map
 	// pointer map
 	// method map
 	return
 }
 func (d stCopyCopy) testNginxDomainUpstreamItemToTestUpstreamItem(src NginxDomainUpstreamItem) (dest UpstreamItem) {
+	// named map
 	// basic map
 	dest.CheckFall = src.CheckFall
 	dest.CheckHTTPExpectAlive = src.CheckHTTPExpectAlive
@@ -116,6 +172,7 @@ func (d stCopyCopy) testNginxDomainUpstreamItemToTestUpstreamItem(src NginxDomai
 	return
 }
 func (d stCopyCopy) testNginxDomainUpstreamServerItemToTestUpstreamServerItem(src NginxDomainUpstreamServerItem) (dest UpstreamServerItem) {
+	// named map
 	// basic map
 	dest.Flag = src.Flag
 	dest.FromPod = src.FromPod
@@ -124,55 +181,6 @@ func (d stCopyCopy) testNginxDomainUpstreamServerItemToTestUpstreamServerItem(sr
 	dest.Weight = src.Weight
 	// slice map
 	// map map
-	// pointer map
-	// method map
-	return
-}
-func (d stCopyCopy) pTestPasswordToTestPassword2(src *Password) (dest Password2) {
-	if src == nil {
-		return
-	}
-	// basic map
-	dest.Nest.Ipone1 = src.Nest.Ipone
-	dest.PasswordName = src.PasswordName
-	// slice map
-	dest.NestSlice = make([]Password2Nest, 0, len(src.NestSlice))
-	for i := 0; i < len(src.NestSlice); i++ {
-		dest.NestSlice[i] = d.testPasswordNestToTestPassword2Nest(src.NestSlice[i])
-	}
-	// map map
-	dest.NestMap = make(map[string]Password2Nest, len(src.NestMap))
-	for key, value := range src.NestMap {
-		dest.NestMap[key] = d.testPasswordNestToTestPassword2Nest(value)
-	}
-	// pointer map
-	// method map
-	return
-}
-func (d stCopyCopy) testPasswordNestToTestPassword2Nest(src PasswordNest) (dest Password2Nest) {
-	// basic map
-	dest.Ipone1 = src.Ipone
-	// slice map
-	// map map
-	// pointer map
-	// method map
-	return
-}
-func (d stCopyCopy) testPasswordToPTestPassword2(src Password) (dest *Password2) {
-	dest = new(Password2)
-	// basic map
-	dest.Nest.Ipone1 = src.Nest.Ipone
-	dest.PasswordName = src.PasswordName
-	// slice map
-	dest.NestSlice = make([]Password2Nest, 0, len(src.NestSlice))
-	for i := 0; i < len(src.NestSlice); i++ {
-		dest.NestSlice[i] = d.testPasswordNestToTestPassword2Nest(src.NestSlice[i])
-	}
-	// map map
-	dest.NestMap = make(map[string]Password2Nest, len(src.NestMap))
-	for key, value := range src.NestMap {
-		dest.NestMap[key] = d.testPasswordNestToTestPassword2Nest(value)
-	}
 	// pointer map
 	// method map
 	return
@@ -188,8 +196,16 @@ func (d nginxDomain2NginxBodyDTOCopy) Copy(dest *NginxBody, src *NginxDomain) {
 	if src == nil {
 		return
 	}
+	// named map
+	dest.Model = src.Model
 	// basic map
 	dest.Cluster = src.Cluster
+	dest.ConfDomain = src.Conf.Domain
+	dest.Domain = src.Domain
+	dest.Product = src.Product
+	dest.Project = src.Project
+	dest.ProjectCname = src.GetName()
+	dest.ProjectID = src.ProjectID
 	dest.Conf.ClientMaxBodySize = src.Conf.ClientMaxBodySize
 	dest.Conf.Domain = src.Conf.Domain
 	dest.Conf.Enable = src.Conf.Enable
@@ -202,13 +218,15 @@ func (d nginxDomain2NginxBodyDTOCopy) Copy(dest *NginxBody, src *NginxDomain) {
 	dest.Conf.SSLOn = src.Conf.SSLOn
 	dest.Conf.Server = src.Conf.Server
 	dest.Conf.ServiceType = src.Conf.ServiceType
-	dest.ConfDomain = src.Conf.Domain
-	dest.Domain = src.Domain
-	dest.Product = src.Product
-	dest.Project = src.Project
-	dest.ProjectCname = src.GetName()
-	dest.ProjectID = src.ProjectID
 	// slice map
+	dest.SliceStruct = make([]Password2, 0, len(src.SliceStruct))
+	for i := 0; i < len(src.SliceStruct); i++ {
+		dest.SliceStruct[i] = d.pTestPasswordToTestPassword2(src.SliceStruct[i])
+	}
+	dest.SliceStruct2 = make([]*Password2, 0, len(src.SliceStruct2))
+	for i := 0; i < len(src.SliceStruct2); i++ {
+		dest.SliceStruct2[i] = d.testPasswordToPTestPassword2(src.SliceStruct2[i])
+	}
 	dest.Conf.Listens = src.Conf.Listens
 	dest.Conf.ListensSSL = src.Conf.ListensSSL
 	dest.Conf.Locations = make([]LocationItem, 0, len(src.Conf.Locations))
@@ -218,14 +236,6 @@ func (d nginxDomain2NginxBodyDTOCopy) Copy(dest *NginxBody, src *NginxDomain) {
 	dest.Conf.UpstreamItems = make([]UpstreamItem, 0, len(src.Conf.UpstreamItems))
 	for i := 0; i < len(src.Conf.UpstreamItems); i++ {
 		dest.Conf.UpstreamItems[i] = d.testNginxDomainUpstreamItemToTestUpstreamItem(src.Conf.UpstreamItems[i])
-	}
-	dest.SliceStruct = make([]Password2, 0, len(src.SliceStruct))
-	for i := 0; i < len(src.SliceStruct); i++ {
-		dest.SliceStruct[i] = d.pTestPasswordToTestPassword2(src.SliceStruct[i])
-	}
-	dest.SliceStruct2 = make([]*Password2, 0, len(src.SliceStruct2))
-	for i := 0; i < len(src.SliceStruct2); i++ {
-		dest.SliceStruct2[i] = d.testPasswordToPTestPassword2(src.SliceStruct2[i])
 	}
 	// map map
 	dest.Map = src.Map
@@ -241,34 +251,88 @@ func (d nginxDomain2NginxBodyDTOCopy) Copy(dest *NginxBody, src *NginxDomain) {
 	// method map
 	return
 }
+func (d nginxDomain2NginxBodyDTOCopy) pTestPasswordToTestPassword2(src *Password) (dest Password2) {
+	if src == nil {
+		return
+	}
+	// named map
+	// basic map
+	dest.PasswordName = src.PasswordName
+	dest.Nest.Ipone1 = src.Nest.Ipone
+	// slice map
+	dest.NestSlice = make([]Password2Nest, 0, len(src.NestSlice))
+	for i := 0; i < len(src.NestSlice); i++ {
+		dest.NestSlice[i] = d.testPasswordNestToTestPassword2Nest(src.NestSlice[i])
+	}
+	// map map
+	dest.NestMap = make(map[string]Password2Nest, len(src.NestMap))
+	for key, value := range src.NestMap {
+		dest.NestMap[key] = d.testPasswordNestToTestPassword2Nest(value)
+	}
+	// pointer map
+	// method map
+	return
+}
+func (d nginxDomain2NginxBodyDTOCopy) testPasswordNestToTestPassword2Nest(src PasswordNest) (dest Password2Nest) {
+	// named map
+	// basic map
+	dest.Ipone1 = src.Ipone
+	// slice map
+	// map map
+	// pointer map
+	// method map
+	return
+}
+func (d nginxDomain2NginxBodyDTOCopy) testPasswordToPTestPassword2(src Password) (dest *Password2) {
+	dest = new(Password2)
+	// named map
+	// basic map
+	dest.PasswordName = src.PasswordName
+	dest.Nest.Ipone1 = src.Nest.Ipone
+	// slice map
+	dest.NestSlice = make([]Password2Nest, 0, len(src.NestSlice))
+	for i := 0; i < len(src.NestSlice); i++ {
+		dest.NestSlice[i] = d.testPasswordNestToTestPassword2Nest(src.NestSlice[i])
+	}
+	// map map
+	dest.NestMap = make(map[string]Password2Nest, len(src.NestMap))
+	for key, value := range src.NestMap {
+		dest.NestMap[key] = d.testPasswordNestToTestPassword2Nest(value)
+	}
+	// pointer map
+	// method map
+	return
+}
 func (d nginxDomain2NginxBodyDTOCopy) testNginxDomainLocationItemToTestLocationItem(src NginxDomainLocationItem) (dest LocationItem) {
+	// named map
+	dest.Huidu.ArgsHuidu = src.Huidu.ArgsHuidu
+	dest.Huidu.HeaderHuidu = src.Huidu.HeaderHuidu
+	dest.Huidu.IPHuidu = src.Huidu.IPHuidu
 	// basic map
 	dest.ConfID = src.ConfID
 	dest.HeaderHost = src.HeaderHost
+	dest.Key = src.Key
+	dest.Rewrite = src.Rewrite
+	dest.SubDirectoryPath = src.SubDirectoryPath
+	dest.UpstreamName = src.UpstreamName
 	dest.Huidu.Enable = src.Huidu.Enable
 	dest.Huidu.HuiduKey = src.Huidu.HuiduKey
 	dest.Huidu.Upstream = src.Huidu.Upstream
 	dest.Huidu.Upstreamhuidu = src.Huidu.Upstreamhuidu
-	dest.Key = src.Key
 	dest.LimitConnZone.Enable = src.LimitConnZone.Enable
 	dest.LimitConnZone.PerServer = src.LimitConnZone.PerServer
 	dest.LimitReqZone.Burst = src.LimitReqZone.Burst
 	dest.LimitReqZone.Enable = src.LimitReqZone.Enable
 	dest.LimitReqZone.Zone = src.LimitReqZone.Zone
-	dest.Rewrite = src.Rewrite
-	dest.SubDirectoryPath = src.SubDirectoryPath
-	dest.UpstreamName = src.UpstreamName
 	// slice map
-	dest.Huidu.ArgsHuidu.Args = src.Huidu.ArgsHuidu.Args
 	dest.Huidu.Content = src.Huidu.Content
-	dest.Huidu.HeaderHuidu.Header = src.Huidu.HeaderHuidu.Header
-	dest.Huidu.IPHuidu.Ips = src.Huidu.IPHuidu.Ips
 	// map map
 	// pointer map
 	// method map
 	return
 }
 func (d nginxDomain2NginxBodyDTOCopy) testNginxDomainUpstreamItemToTestUpstreamItem(src NginxDomainUpstreamItem) (dest UpstreamItem) {
+	// named map
 	// basic map
 	dest.CheckFall = src.CheckFall
 	dest.CheckHTTPExpectAlive = src.CheckHTTPExpectAlive
@@ -293,6 +357,7 @@ func (d nginxDomain2NginxBodyDTOCopy) testNginxDomainUpstreamItemToTestUpstreamI
 	return
 }
 func (d nginxDomain2NginxBodyDTOCopy) testNginxDomainUpstreamServerItemToTestUpstreamServerItem(src NginxDomainUpstreamServerItem) (dest UpstreamServerItem) {
+	// named map
 	// basic map
 	dest.Flag = src.Flag
 	dest.FromPod = src.FromPod
@@ -301,55 +366,6 @@ func (d nginxDomain2NginxBodyDTOCopy) testNginxDomainUpstreamServerItemToTestUps
 	dest.Weight = src.Weight
 	// slice map
 	// map map
-	// pointer map
-	// method map
-	return
-}
-func (d nginxDomain2NginxBodyDTOCopy) pTestPasswordToTestPassword2(src *Password) (dest Password2) {
-	if src == nil {
-		return
-	}
-	// basic map
-	dest.Nest.Ipone1 = src.Nest.Ipone
-	dest.PasswordName = src.PasswordName
-	// slice map
-	dest.NestSlice = make([]Password2Nest, 0, len(src.NestSlice))
-	for i := 0; i < len(src.NestSlice); i++ {
-		dest.NestSlice[i] = d.testPasswordNestToTestPassword2Nest(src.NestSlice[i])
-	}
-	// map map
-	dest.NestMap = make(map[string]Password2Nest, len(src.NestMap))
-	for key, value := range src.NestMap {
-		dest.NestMap[key] = d.testPasswordNestToTestPassword2Nest(value)
-	}
-	// pointer map
-	// method map
-	return
-}
-func (d nginxDomain2NginxBodyDTOCopy) testPasswordNestToTestPassword2Nest(src PasswordNest) (dest Password2Nest) {
-	// basic map
-	dest.Ipone1 = src.Ipone
-	// slice map
-	// map map
-	// pointer map
-	// method map
-	return
-}
-func (d nginxDomain2NginxBodyDTOCopy) testPasswordToPTestPassword2(src Password) (dest *Password2) {
-	dest = new(Password2)
-	// basic map
-	dest.Nest.Ipone1 = src.Nest.Ipone
-	dest.PasswordName = src.PasswordName
-	// slice map
-	dest.NestSlice = make([]Password2Nest, 0, len(src.NestSlice))
-	for i := 0; i < len(src.NestSlice); i++ {
-		dest.NestSlice[i] = d.testPasswordNestToTestPassword2Nest(src.NestSlice[i])
-	}
-	// map map
-	dest.NestMap = make(map[string]Password2Nest, len(src.NestMap))
-	for key, value := range src.NestMap {
-		dest.NestMap[key] = d.testPasswordNestToTestPassword2Nest(value)
-	}
 	// pointer map
 	// method map
 	return

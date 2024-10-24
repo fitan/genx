@@ -12,7 +12,7 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-func Gen(pkg *packages.Package, doc common.Doc, methods []common.InterfaceMethod) {
+func Gen(pkg *packages.Package, doc common.Doc, methods []common.InterfaceMethod) string {
 	slog.Info("gen cache", slog.Any("pkg", pkg), slog.Any("methods", methods))
 
 	var keyPrefix string
@@ -39,7 +39,7 @@ func Gen(pkg *packages.Package, doc common.Doc, methods []common.InterfaceMethod
 	j.Add(funcList...)
 	j.Add(genNewCache(pkg.Name))
 
-	common.WriteGO("cache.go", j.GoString())
+	return j.GoString()
 }
 
 func genCacheFunc(serviceName string, keyPrefix string, method common.InterfaceMethod) jen.Code {

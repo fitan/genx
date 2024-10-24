@@ -5,6 +5,7 @@ import (
 	"go/types"
 	"strings"
 
+	"github.com/samber/lo"
 	"golang.org/x/exp/slog"
 	"golang.org/x/tools/go/packages"
 )
@@ -79,8 +80,11 @@ func (i *InterfaceSerialize) Parse(it *types.Interface, doc *Doc) (InterfaceMeta
 		}
 
 		implMethod := InterfaceMethod{
-			Name:           methodName,
-			Doc:            doc,
+			Name: methodName,
+			Doc:  doc,
+			RawDoc: lo.Map(comment.List, func(item *ast.Comment, index int) string {
+				return item.Text
+			}),
 			Params:         params,
 			Results:        results,
 			ReturnsError:   returnsError,
@@ -102,6 +106,7 @@ type InterfaceMetaDate struct {
 type InterfaceMethod struct {
 	Name           string
 	Doc            Doc
+	RawDoc         []string
 	Params         MethodParamSlice
 	Results        MethodParamSlice
 	ReturnsError   bool

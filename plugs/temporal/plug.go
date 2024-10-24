@@ -1,7 +1,7 @@
 package temporal
 
 import (
-	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/fitan/genx/common"
@@ -19,7 +19,6 @@ func (p *Plug) Name() string {
 }
 
 func (p *Plug) Gen(option gen.Option, implGoTypeMetes []gen.InterfaceGoTypeMeta) (err error) {
-	fmt.Println("start temporal")
 	j := jen.NewFile(option.Pkg.Name)
 	for _, v := range option.Imports {
 		if v.Name != nil {
@@ -49,6 +48,6 @@ func (p *Plug) Gen(option gen.Option, implGoTypeMetes []gen.InterfaceGoTypeMeta)
 	//}
 
 	Gen(j, option, implGoTypeMetes)
-	common.WriteGO("temporal.go", j.GoString())
+	common.WriteGO(filepath.Join(option.Dir, "temporal.go"), j.GoString())
 	return
 }

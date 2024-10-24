@@ -1,6 +1,8 @@
 package cache
 
 import (
+	"path/filepath"
+
 	"github.com/fitan/genx/common"
 	"github.com/fitan/genx/gen"
 	"golang.org/x/exp/slog"
@@ -23,7 +25,10 @@ func (p *Plug) Gen(option gen.Option, implGoTypeMetes []gen.InterfaceGoTypeMeta)
 			return err
 		}
 
-		Gen(option.Pkg, v.Doc, meta.Methods)
+		f := Gen(option.Pkg, v.Doc, meta.Methods)
+
+		common.WriteGO(filepath.Join(option.Dir, "cache.go"), f)
+
 	}
 	return nil
 }

@@ -32,12 +32,13 @@ const CopyAutoCastTag = "@copy-auto-cast"
 type Field struct {
 	Path []string
 	// 别名Path
-	AliasPath []string
-	Name      string
-	Type      *common.Type
-	ParentDoc common.Doc
-	Doc       common.Doc
-	IsNamed   bool
+	AliasPath     []string
+	EmbeddedIndex []int
+	Name          string
+	Type          *common.Type
+	ParentDoc     common.Doc
+	Doc           common.Doc
+	IsNamed       bool
 
 	// doc
 	CopyPrefix       string
@@ -155,6 +156,7 @@ func (o OrderMap) GetByField(f Field) (res Field, has bool) {
 		// slog.Info("getByField eq name", "fName", fName, "vName", vName, "sourceName", f.Name, "copyName", f.CopyName, "doc", f.Doc)
 		if fName == vName {
 			if slices.Equal(lo.DropRight(v.AliasPath, 1), lo.DropRight(f.AliasPath, 1)) {
+				fmt.Println("fName == vName", fName, vName, lo.DropRight(v.AliasPath, 1), lo.DropRight(f.AliasPath, 1))
 				res = v
 				has = true
 				// 最高优先级直接返回
@@ -163,10 +165,11 @@ func (o OrderMap) GetByField(f Field) (res Field, has bool) {
 		}
 	}
 
-	// 次优先也可以
-	// if has == true {
-	// 	return
-	// }
+	for _, of := range o {
+		if DepthFind(of, 0, f, 0) {
+			return of, true
+		}
+	}
 
 	if f.CopyMust {
 		slog.Error("字段未找到", "name", f.Name, "path", strings.Join(f.Path, "."))
@@ -175,14 +178,71 @@ func (o OrderMap) GetByField(f Field) (res Field, has bool) {
 	return Field{}, false
 }
 
-func (o OrderMap) OrderKeys() []string {
-	var keys []string
-	for k := range o {
-		keys = append(keys, k)
+func DepthFind(dest Field, destIndex int, src Field, srcIndex int) bool {
+	if destIndex == 0 {
+		fmt.Println("first", "destIndex", dest.AliasPath, dest.EmbeddedIndex, "srcIndex", src.AliasPath, src.EmbeddedIndex)
+	}
+	if destIndex > len(dest.AliasPath)-1 && srcIndex > len(src.AliasPath)-1 {
+		return true
+	}
+	if destIndex > len(dest.AliasPath)-1 || srcIndex > len(src.AliasPath)-1 {
+		return false
+	}
+	if len(src.AliasPath)-1 == srcIndex && len(dest.AliasPath)-1 == destIndex && src.AliasPath[srcIndex] == dest.AliasPath[destIndex] {
+		return true
 	}
 
-	slices.Sort(keys)
+	// 相应的节点
+	var eq0 bool
+	// src 隐藏
+	var eq1 bool
+	// dest 隐藏
+	var eq2 bool
+	// src dest 隐藏
+	var eq3 bool
+	if src.AliasPath[srcIndex] == dest.AliasPath[destIndex] {
+		eq0 = DepthFind(dest, destIndex+1, src, srcIndex+1)
+	}
+
+	if srcIndex+1 < len(src.AliasPath) && lo.Contains(src.EmbeddedIndex, srcIndex) && src.AliasPath[srcIndex+1] == dest.AliasPath[destIndex] {
+		eq1 = DepthFind(dest, destIndex+1, src, srcIndex+2)
+	}
+
+	if destIndex+1 < len(dest.AliasPath) && lo.Contains(dest.EmbeddedIndex, destIndex) && dest.AliasPath[destIndex+1] == src.AliasPath[srcIndex] {
+		eq2 = DepthFind(dest, destIndex+2, src, srcIndex+1)
+	}
+
+	if destIndex+1 < len(dest.AliasPath) && srcIndex+1 < len(src.AliasPath) && lo.Contains(dest.EmbeddedIndex, destIndex) && lo.Contains(src.EmbeddedIndex, srcIndex) && src.AliasPath[srcIndex+1] == dest.AliasPath[destIndex+1] {
+		eq3 = DepthFind(dest, destIndex+2, src, srcIndex+2)
+	}
+
+	return eq0 || eq1 || eq2 || eq3
+}
+
+// named 比较特殊要先从段的路径开始排序， 路径长的可能是子路径会影响赋值
+// 先根据path长度升序，同长度的再根据名字排序
+
+func (o OrderMap) OrderKeys() []string {
+	var keys []string
+	mapKey := make(map[int][]string, 0)
+	for k, v := range o {
+		pathLen := len(v.Path)
+		if mapKey[pathLen] == nil {
+			mapKey[pathLen] = make([]string, 0)
+		}
+		mapKey[pathLen] = append(mapKey[pathLen], k)
+	}
+
+	mapIndex := lo.Keys(mapKey)
+	slices.Sort(mapIndex)
+	for _, v := range mapIndex {
+		k := mapKey[v]
+		slices.Sort(k)
+		keys = append(keys, k...)
+	}
+
 	return keys
+
 }
 
 type MapMethod struct {
@@ -190,6 +250,15 @@ type MapMethod struct {
 	ParamID  string
 	ResultID string
 	IsError  bool
+}
+
+type StructFields struct {
+	NamedMap   OrderMap
+	PointerMap OrderMap
+	SliceMap   OrderMap
+	MapMap     OrderMap
+	BasicMap   OrderMap
+	StructMap  OrderMap
 }
 
 func NewDataFieldMap(pkg *packages.Package, path []string, aliasPath []string, name string, commonType *common.Type) *DataFieldMap {
@@ -205,11 +274,12 @@ func NewDataFieldMap(pkg *packages.Package, path []string, aliasPath []string, n
 		MapMethodList: []MapMethod{},
 	}
 	m.Parse(Field{
-		Path:      path,
-		AliasPath: aliasPath,
-		Name:      "_root",
-		Type:      commonType,
-		Doc:       nil,
+		Path:          path,
+		AliasPath:     aliasPath,
+		EmbeddedIndex: []int{},
+		Name:          "_root",
+		Type:          commonType,
+		Doc:           nil,
 	})
 
 	methodSet := typeutil.IntuitiveMethodSet(commonType.T, nil)
@@ -254,7 +324,7 @@ func (d *DataFieldMap) saveField(m map[string]Field, name string, field Field) {
 		return
 	} else {
 		slog.Error("MapID 重复.", "Path", strings.Join(field.Path, "."), "oldPath", strings.Join(oldField.Path, "."))
-		panic(fmt.Sprintf("MapID: %s 重复. 路径地址： %s."))
+		panic("MapID 重复.")
 	}
 
 	//fmt.Printf("作用域内重复定义: %s. src.DestIdPath: %s, src.SrcIdPath: %s, dest.DestIdPath: %s, dest.SrcIdPath: %s \n", name, oldField.DestIdPath().GoString(), oldField.SrcIdPath().GoString(), field.DestIdPath().GoString(), field.SrcIdPath().GoString())
@@ -271,11 +341,12 @@ func (d *DataFieldMap) Parse(f Field) {
 	switch v := f.Type.T.(type) {
 	case *types.Pointer:
 		d.Parse(Field{
-			Name:      f.Name,
-			Type:      common.TypeOf(f.Type.PointerType.Elem()),
-			Path:      f.Path,
-			AliasPath: f.AliasPath,
-			Doc:       f.Doc,
+			Name:          f.Name,
+			Type:          common.TypeOf(f.Type.PointerType.Elem()),
+			Path:          f.Path,
+			AliasPath:     f.AliasPath,
+			Doc:           f.Doc,
+			EmbeddedIndex: f.EmbeddedIndex,
 		})
 	case *types.Basic:
 		d.saveField(d.BasicMap, f.Name, f)
@@ -288,13 +359,15 @@ func (d *DataFieldMap) Parse(f Field) {
 		return
 	case *types.Array:
 	case *types.Named:
+		d.saveField(d.NamedMap, f.Name, f)
 		d.Parse(Field{
-			Name:      f.Name,
-			Type:      common.TypeOf(v.Underlying()),
-			Path:      f.Path,
-			AliasPath: f.AliasPath,
-			Doc:       f.Doc,
-			IsNamed:   true,
+			Name:          f.Name,
+			Type:          common.TypeOf(v.Underlying()),
+			Path:          f.Path,
+			AliasPath:     f.AliasPath,
+			Doc:           f.Doc,
+			IsNamed:       true,
+			EmbeddedIndex: f.EmbeddedIndex,
 		})
 		return
 	case *types.Struct:
@@ -313,22 +386,24 @@ func (d *DataFieldMap) Parse(f Field) {
 			}
 			var aliasName string
 			parseDoc.ByFuncNameAndArgs(CopyNameTag, &aliasName)
-			if lo.IsEmpty(aliasName) {
+			if lo.IsEmpty(f.CopyName) {
 				aliasName = field.Name()
 			}
 			var path []string
 			var aliasPath []string
-			if !field.Embedded() {
-				path = append(f.Path[0:], field.Name())
-				aliasPath = append(f.AliasPath[0:], aliasName)
-			}
+
+			// if !field.Embedded() {
+			path = append(f.Path[0:], field.Name())
+			aliasPath = append(f.AliasPath[0:], aliasName)
+			// }
 			d.Parse(Field{
-				Path:      path,
-				AliasPath: aliasPath,
-				Name:      indexName,
-				Type:      common.TypeOf(field.Type()),
-				ParentDoc: f.Doc,
-				Doc:       parseDoc,
+				Path:          path,
+				AliasPath:     aliasPath,
+				EmbeddedIndex: lo.Ternary(field.Embedded(), append(f.EmbeddedIndex[0:], len(path)-1), f.EmbeddedIndex),
+				Name:          indexName,
+				Type:          common.TypeOf(field.Type()),
+				ParentDoc:     f.Doc,
+				Doc:           parseDoc,
 			})
 		}
 		return
@@ -404,6 +479,8 @@ type Copy struct {
 	DefaultFn      *jen.Statement
 	StructName     string
 	Head           bool
+	// namedEq: 源字段名与目标字段名相同 它的子路径不需要再次拷贝
+	NamedEq []string
 }
 
 func (d *Copy) FnName() string {
@@ -447,6 +524,8 @@ func (d *Copy) Gen() {
 	// if d.Dest.Type.Pointer {
 	// bind = append(bind, jen.Id("dest = new").Call(common.TypeOf(d.Dest.Type.PointerType.Elem()).TypeAsJenComparePkgName(d.Pkg)))
 	// }
+	bind = append(bind, jen.Comment("named map"))
+	bind = append(bind, d.GenNamed()...)
 	bind = append(bind, jen.Comment("basic map"))
 	bind = append(bind, d.GenBasic()...)
 	bind = append(bind, jen.Comment("slice map"))
@@ -478,11 +557,54 @@ func (d *Copy) GenExtraCopyMethod(bind *jen.Statement, destV, srcV Field) (has b
 	return false
 
 }
+func (d *Copy) GenNamed() jen.Statement {
+	bind := make(jen.Statement, 0)
+	for _, k := range d.Dest.NamedMap.OrderKeys() {
+		v := d.Dest.NamedMap[k]
+		if d.CheckNamedEq(v) {
+			continue
+		}
+
+		if !lo.IsEmpty(v.CopyTargetMethod) {
+			bind.Add(v.DestIdPath().Op("=").Id("src." + v.CopyTargetMethod + "()"))
+			continue
+		}
+		srcV, ok := d.Src.NamedMap.GetByField(v)
+		if !ok {
+			continue
+		}
+
+		if d.GenExtraCopyMethod(&bind, v, srcV) {
+			continue
+		}
+
+		if v.Type.ID() == srcV.Type.ID() {
+			d.NamedEq = append(d.NamedEq, v.DestIdPath().GoString())
+			bind.Add(v.DestIdPath().Op("=").Add(srcV.SrcIdPath()))
+		}
+
+	}
+
+	return bind
+}
+
+func (d *Copy) CheckNamedEq(f Field) bool {
+	for _, v := range d.NamedEq {
+		if strings.HasPrefix(f.DestIdPath().GoString(), v) {
+			return true
+		}
+	}
+	return false
+}
 
 func (d *Copy) GenBasic() jen.Statement {
 	bind := make(jen.Statement, 0)
 	for _, k := range d.Dest.BasicMap.OrderKeys() {
 		v := d.Dest.BasicMap[k]
+
+		if d.CheckNamedEq(v) {
+			continue
+		}
 
 		if !lo.IsEmpty(v.CopyTargetMethod) {
 			// bind = append(bind, jen.Comment("source: "+v.SrcIdPath().GoString()+" target: "+v.CopyTargetMethod+"()"))
@@ -513,6 +635,9 @@ func (d *Copy) GenMap() jen.Statement {
 	bind := make(jen.Statement, 0)
 	for _, key := range d.Dest.MapMap.OrderKeys() {
 		v := d.Dest.MapMap[key]
+		if d.CheckNamedEq(v) {
+			continue
+		}
 		srcV, ok := d.Src.MapMap.GetByField(v)
 		if !ok {
 			fmt.Printf("not found %s in %s\n", v.Name, d.SumPath())
@@ -581,6 +706,9 @@ func (d *Copy) GenPointer() jen.Statement {
 	bind := make(jen.Statement, 0)
 	for _, key := range d.Dest.PointerMap.OrderKeys() {
 		v := d.Dest.PointerMap[key]
+		if d.CheckNamedEq(v) {
+			continue
+		}
 		srcV, ok := d.Src.PointerMap.GetByField(v)
 		if !ok {
 			continue
@@ -636,6 +764,11 @@ func (d *Copy) GenSlice() jen.Statement {
 	bind := make(jen.Statement, 0)
 	for _, key := range d.Dest.SliceMap.OrderKeys() {
 		v := d.Dest.SliceMap[key]
+
+		if d.CheckNamedEq(v) {
+			continue
+		}
+
 		srcV, ok := d.Src.SliceMap.GetByField(v)
 		if !ok {
 			continue

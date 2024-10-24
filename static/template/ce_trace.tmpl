@@ -1,0 +1,52 @@
+{{/* gotype: github.com/fitan/gowrap/generator.TemplateInputs */}}
+
+type tracing struct {
+	next   Service
+	tracer opentracing.Tracer
+}
+
+{{range $m := $.Methods}}
+func (s *tracing) {{$m.Declaration}} {
+	{{if $m.AcceptsContext}}
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "{{$m.Name}}", opentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "{{$.Instance}}",
+	})
+	defer func() {
+{{range $v := $m.ParamsExcludeCtx}}
+	{{if not $v.Basic}}
+		{{$v.Name}}Byte,_ := json.Marshal({{$v.Name}})
+		{{$v.Name}}Json := string({{$v.Name}}Byte)
+	{{end}}
+{{end}}
+
+		span.LogKV(
+			{{range $v := $m.ParamsExcludeCtx}}"{{$v.Name}}",{{if not $v.Basic}}{{$v.Name}}Json{{else}}{{$v.Name}}{{end}},{{end}}
+			{{if $m.ReturnsError}}
+			"err",err,
+			{{end}}
+		)
+		{{if $m.ReturnsError}}
+		span.SetTag(string(ext.Error), err != nil)
+		{{end}}
+		span.Finish()
+	}()
+	{{end}}
+
+	{{if $m.HasResults}}
+	return s.next.{{$m.Call}}
+	{{else}}
+	s.next.{{$m.Call}}
+	{{end}}
+}
+{{end}}
+
+
+func NewTracing(otTracer opentracing.Tracer) Middleware {
+	return func(next Service) Service {
+		return &tracing{
+			next:   next,
+			tracer: otTracer,
+		}
+	}
+}

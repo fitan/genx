@@ -3,12 +3,10 @@ package otel
 import (
 	"github.com/fitan/genx/common"
 	"github.com/fitan/jennifer/jen"
-	"golang.org/x/exp/slog"
 	"golang.org/x/tools/go/packages"
 )
 
-func Gen(pkg *packages.Package, methods []common.InterfaceMethod) {
-	slog.Info("gen otel", slog.Any("pkg", pkg), slog.Any("methods", methods))
+func Gen(pkg *packages.Package, methods []common.InterfaceMethod) string {
 	j := jen.NewFile(pkg.Name)
 	common.JenAddImports(pkg, j)
 	j.AddImport("context", "")
@@ -32,7 +30,7 @@ func Gen(pkg *packages.Package, methods []common.InterfaceMethod) {
 	j.Add(funcList...)
 	j.Add(genNewOtel(pkg.Name))
 
-	common.WriteGO("otel.go", j.GoString())
+	return j.GoString()
 }
 
 func genOtelFunc(tracingPrefix string, method common.InterfaceMethod) jen.Code {

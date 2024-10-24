@@ -1,13 +1,20 @@
 package gen
 
 import (
+	"embed"
+	"fmt"
 	"go/ast"
 	"go/types"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/fitan/genx/common"
+	"github.com/knadh/koanf/parsers/yaml"
+	"github.com/knadh/koanf/providers/file"
+	"github.com/knadh/koanf/v2"
+	"github.com/sourcegraph/conc"
 	"golang.org/x/exp/slog"
 	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/go/packages"
@@ -19,6 +26,8 @@ type X struct {
 	Option Option
 	Metas  Metas
 	Plugs  Plugs
+	WG     *conc.WaitGroup
+	Model  *Model
 }
 
 type Metas struct {
@@ -71,7 +80,37 @@ func (x *X) Gen() {
 	x.typeSpecGen()
 	x.funcGen()
 	x.callGen()
+	x.WG.Wait()
 	return
+}
+
+func (x *X) model(name string, f func() error) {
+	key := fmt.Sprintf("%s/%s", x.Option.Pkg, name)
+	x.Model.AddMsg(key, ModelMsg{
+		PkgName:  x.Option.Pkg.PkgPath,
+		PlugName: name,
+		Msg:      "running",
+	})
+
+	timeStart := time.Now()
+	slog.Info("call gen start", slog.String("name", strings.ToUpper(name)))
+	err := f()
+
+	if err != nil {
+		slog.Error("impl gen error", err, slog.String("name", strings.ToUpper(name)))
+		x.Model.UpdateMsg(key, ModelMsg{
+			PkgName:  x.Option.Pkg.PkgPath,
+			PlugName: name,
+			Msg:      err.Error(),
+		})
+	}
+	slog.Info("call gen end", slog.String("name", strings.ToUpper(name)), slog.Duration("time", time.Since(timeStart)))
+
+	x.Model.UpdateMsg(key, ModelMsg{
+		PkgName:  x.Option.Pkg.PkgPath,
+		PlugName: name,
+		Msg:      "success",
+	})
 }
 
 func (x *X) parse() {
@@ -98,8 +137,11 @@ func (x *X) parse() {
 					for _, param := range t.Args {
 						call.Params = append(call.Params, common.TypeOf(x.Option.Pkg.TypesInfo.TypeOf(param)))
 					}
-					for _, param := range c.Parent().(*ast.AssignStmt).Lhs {
-						call.Results = append(call.Results, common.TypeOf(x.Option.Pkg.TypesInfo.TypeOf(param)))
+					parentAssignStmt, ok := c.Parent().(*ast.AssignStmt)
+					if ok {
+						for _, param := range parentAssignStmt.Lhs {
+							call.Results = append(call.Results, common.TypeOf(x.Option.Pkg.TypesInfo.TypeOf(param)))
+						}
 					}
 					slog.Info("parse call", slog.String("name", line.UpFuncName()))
 					x.Metas.Call.NameGoTypeMap[line.UpFuncName()] = append(x.Metas.Call.NameGoTypeMap[line.UpFuncName()], call)
@@ -196,10 +238,12 @@ func (x *X) implGen() {
 	for _, v := range x.Plugs.Impl {
 		metas, ok := x.Metas.Impl.NameGoTypeMap[strings.ToUpper(v.Name())]
 		if ok {
-			err := v.Gen(x.Option, metas)
-			if err != nil {
-				slog.Error("impl gen error", err, slog.String("name", strings.ToUpper(v.Name())))
-			}
+			modelName := v.Name()
+			x.WG.Go(func() {
+				x.model(modelName, func() error {
+					return v.Gen(x.Option, metas)
+				})
+			})
 		}
 	}
 }
@@ -208,13 +252,16 @@ func (x *X) callGen() {
 	for _, v := range x.Plugs.Call {
 		metas, ok := x.Metas.Call.NameGoTypeMap[strings.ToUpper(v.Name())]
 		if ok {
-			slog.Info("call gen start", slog.String("name", strings.ToUpper(v.Name())))
-			timeStart := time.Now()
-			err := v.Gen(x.Option, metas)
-			slog.Info("call gen end", slog.String("name", strings.ToUpper(v.Name())), slog.Duration("time", time.Since(timeStart)))
-			if err != nil {
-				slog.Error("call gen error", err, slog.String("name", strings.ToUpper(v.Name())))
-			}
+			modelName := v.Name()
+			x.WG.Go(func() {
+				x.model(modelName, func() error {
+					err := v.Gen(x.Option, metas)
+					if err != nil {
+						panic(err)
+					}
+					return err
+				})
+			})
 		}
 	}
 }
@@ -223,10 +270,12 @@ func (x *X) typeGen() {
 	for _, v := range x.Plugs.Type {
 		metas, ok := x.Metas.Type.NameGoTypeMap[strings.ToUpper(v.Name())]
 		if ok {
-			err := v.Gen(x.Option, metas)
-			if err != nil {
-				slog.Error("type gen error", err, slog.String("name", strings.ToUpper(v.Name())))
-			}
+			modelName := v.Name()
+			x.WG.Go(func() {
+				x.model(modelName, func() error {
+					return v.Gen(x.Option, metas)
+				})
+			})
 		}
 	}
 }
@@ -235,10 +284,12 @@ func (x *X) structGen() {
 	for _, v := range x.Plugs.Struct {
 		metas, ok := x.Metas.Struct.NameGoTypeMap[strings.ToUpper(v.Name())]
 		if ok {
-			err := v.Gen(x.Option, metas)
-			if err != nil {
-				slog.Error("struct gen error", err, slog.String("name", strings.ToUpper(v.Name())))
-			}
+			modelName := v.Name()
+			x.WG.Go(func() {
+				x.model(modelName, func() error {
+					return v.Gen(x.Option, metas)
+				})
+			})
 		}
 	}
 }
@@ -247,12 +298,12 @@ func (x *X) funcGen() {
 	for _, v := range x.Plugs.Func {
 		metas, ok := x.Metas.Func.NameGoTypeMap[strings.ToUpper(v.Name())]
 		if ok {
-			slog.Info("func gen", slog.String("name", strings.ToUpper(v.Name())))
-			spew.Dump(metas)
-			err := v.Gen(x.Option, metas)
-			if err != nil {
-				slog.Error("func gen error", err, slog.String("name", strings.ToUpper(v.Name())))
-			}
+			modelName := v.Name()
+			x.WG.Go(func() {
+				x.model(modelName, func() error {
+					return v.Gen(x.Option, metas)
+				})
+			})
 		}
 	}
 }
@@ -261,20 +312,27 @@ func (x *X) typeSpecGen() {
 	for _, v := range x.Plugs.TypeSpec {
 		metas, ok := x.Metas.TypeSpec.NameGoTypeMap[strings.ToUpper(v.Name())]
 		if ok {
-			err := v.Gen(x.Option, metas)
-			if err != nil {
-				slog.Error("struct gen error", err, slog.String("name", strings.ToUpper(v.Name())))
-			}
+			modelName := v.Name()
+			x.WG.Go(func() {
+				x.model(modelName, func() error {
+					return v.Gen(x.Option, metas)
+				})
+			})
 		}
 	}
 }
 
-func NewXByPkg(p *packages.Package) (*X, error) {
+func NewXByPkg(static embed.FS, p *packages.Package, model *Model, config *Config) (*X, error) {
 	return &X{
+		Model: model,
+		WG:    conc.NewWaitGroup(),
 		Option: Option{
+			Static:          static,
 			Pkg:             p,
+			Dir:             filepath.Dir(p.GoFiles[0]),
 			Imports:         make([]*ast.ImportSpec, 0),
 			MainExtraImport: make([][]string, 0),
+			Config:          config,
 		},
 		Metas: Metas{
 			Impl: ImplMeta{
@@ -307,16 +365,64 @@ func NewXByPkg(p *packages.Package) (*X, error) {
 	}, nil
 }
 
-func NewX(dir string) (*X, error) {
-	p, err := common.LoadPkg(dir)
+func NewX(static embed.FS, dir string, model *Model) (res []*X, err error) {
+	config := findGenXConfig()
+
+	ps, err := common.LoadPkg(dir)
 	if err != nil {
 		return nil, err
 	}
-	return NewXByPkg(p)
+
+	for _, p := range ps {
+		x, err := NewXByPkg(static, p, model, config)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, x)
+	}
+
+	return
 }
 
 type Option struct {
+	Static          embed.FS
 	Pkg             *packages.Package
+	Dir             string
 	Imports         []*ast.ImportSpec
 	MainExtraImport [][]string
+	Config          *Config
+}
+
+func findGenXConfig() *Config {
+	pwd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+
+	currentDir := ""
+	tmpFilePath := ""
+
+	for {
+		tmpFilePath = filepath.Join(pwd, "genx.yaml")
+		if currentDir == tmpFilePath {
+			panic("genx.yaml not found")
+		}
+		if _, err := os.Stat(tmpFilePath); os.IsNotExist(err) {
+			currentDir = tmpFilePath
+			pwd = filepath.Dir(pwd)
+			continue
+		}
+		break
+	}
+
+	k := koanf.New(".")
+
+	err = k.Load(file.Provider(tmpFilePath), yaml.Parser())
+	if err != nil {
+		panic(err)
+	}
+
+	config := &Config{}
+	k.Unmarshal("", config)
+	return config
 }

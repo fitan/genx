@@ -1,0 +1,65 @@
+{{/* gotype: github.com/fitan/gowrap/generator.TemplateInputs */}}
+
+const (
+{{range $m := .Methods}}{{if $.HasMethodPath $m.Name}}
+	{{$m.Name}}MethodName = "{{$m.Name}}"
+{{end}}{{end}}
+)
+
+
+type Endpoints struct {
+{{range $m := $.Methods}}{{if $.HasMethodPath $m.Name}}
+    {{$m.Name}}Endpoint endpoint.Endpoint
+{{end}}{{end}}
+}
+
+func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
+	eps := Endpoints{
+		{{range $m := $.Methods}}{{if $.HasMethodPath $m.Name}}
+		{{$m.Name}}Endpoint: make{{$m.Name}}Endpoint(s),
+		{{end}}{{end}}
+	}
+	{{range $m := $.Methods}}{{if $.HasMethodPath $m.Name}}
+	for _, m := range dmw[{{$m.Name}}MethodName] {
+		eps.{{$m.Name}}Endpoint = m(eps.{{$m.Name}}Endpoint)
+	}
+	{{end}}{{end}}
+
+	return eps
+}
+
+{{range $m := $.Methods}}{{if $.HasMethodPath $m.Name}}
+func make{{$m.Name}}Endpoint(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		{{if ne $m.KitRequest.RequestName "nil"}}
+		req := request.({{$m.KitRequest.RequestName}})
+		{{end}}
+
+		{{$m.KitRequest.BindEndpointCtxParam}}
+
+		{{range $v := $m.ResultsExcludeErr}}
+		var {{$v.Name}} {{$v.ID}}
+		{{end}}
+
+		{{$m.ResultsNames}} = s.{{$m.Name}}(
+			ctx,
+			{{if $m.KitRequest.RequestIsBody}}
+			req,
+			{{else}}
+			{{range $v := $m.ParamsExcludeCtx}}req{{$m.KitRequest.ParamPath $v.Name}},{{end}}
+			{{end}}
+		)
+		{{if eq (len $m.ResultsExcludeErr) 1}}
+		return encode.Response{
+			Data: {{(index $m.ResultsExcludeErr 0).Name}},
+			Error: err,
+		}, nil
+		{{else}}
+		return encode.Response{
+			Data: {{$m.ResultsMapExcludeErr}},
+			Error: err,
+		},nil
+		{{end}}
+	}
+}
+{{end}}{{end}}

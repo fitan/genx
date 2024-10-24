@@ -1,12 +1,25 @@
 package common
 
 import (
+	"bytes"
+	"embed"
 	"fmt"
-	"golang.org/x/tools/go/packages"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
+	"text/template"
 	"unicode"
+
+	"github.com/iancoleman/strcase"
+	"github.com/jinzhu/inflection"
+	"golang.org/x/tools/go/packages"
 )
+
+func init() {
+
+}
 
 func DownFirst(s string) string {
 	for _, v := range s {
@@ -75,4 +88,56 @@ func DepPkg(pkg *packages.Package, record map[string]*packages.Package) {
 	//		pkgs = append(pkgs, v)
 	//	}
 	//}
+}
+
+func GenFileByTemplate(efs embed.FS, fileName string, input any) (string, error) {
+	f, err := fs.ReadFile(efs, fmt.Sprintf("static/template/%s.tmpl", fileName))
+	if err != nil {
+		err = fmt.Errorf("read template file failed: %w", err)
+		return "", err
+	}
+	tt, err := template.New("template").Funcs(helperFuncs).Parse(string(f))
+	if err != nil {
+		return "", err
+	}
+
+	var buffer bytes.Buffer
+	err = tt.Execute(&buffer, input)
+
+	return buffer.String(), err
+}
+
+var helperFuncs = template.FuncMap{
+	"up":         strings.ToUpper,
+	"down":       strings.ToLower,
+	"upFirst":    upFirst,
+	"downFirst":  downFirst,
+	"replace":    strings.ReplaceAll,
+	"snake":      toSnakeCase,
+	"plural":     inflection.Plural,
+	"camel":      strcase.ToCamel,
+	"lowerCamel": strcase.ToLowerCamel,
+}
+
+var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
+var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
+
+func toSnakeCase(str string) string {
+	result := matchFirstCap.ReplaceAllString(str, "${1}_${2}")
+	result = matchAllCap.ReplaceAllString(result, "${1}_${2}")
+	return strings.ToLower(result)
+}
+
+func downFirst(s string) string {
+	for _, v := range s {
+		return string(unicode.ToLower(v)) + s[len(string(v)):]
+	}
+	return ""
+}
+
+func upFirst(s string) string {
+	for _, v := range s {
+		return string(unicode.ToUpper(v)) + s[len(string(v)):]
+	}
+	return ""
 }

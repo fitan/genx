@@ -1,0 +1,73 @@
+{{/* gotype: github.com/fitan/gowrap/generator.TemplateInputs */}}
+
+
+{{if eq $.ValidVersion "v10"}}
+var validate = validator.New()
+{{end}}
+
+func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.ServerOption) http.Handler {
+	var ems []endpoint.Middleware
+
+	opts = append(opts, kithttp.ServerBefore(func(ctx context.Context, request *http.Request) context.Context {
+		return ctx
+	}))
+
+	{{- if len $.KitServerOption}}
+	opts = append(opts, {{$.KitServerOption}})
+	{{- end}}
+
+	ems = append(ems, dmw...)
+
+	eps := NewEndpoint(s, map[string][]endpoint.Middleware{
+		{{range $m := $.Methods}}{{if $.HasMethodPath $m.Name}}
+            {{$m.Name}}MethodName: ems,
+		{{end}}{{end}}
+	})
+
+	r := mux.NewRouter()
+
+	{{range $m := $.Methods}}{{if $.HasMethodPath $m.Name}}
+	r.Handle("{{$.MethodPath $m.Name}}", kithttp.NewServer(
+		{{$m.KitHttpServiceEndpointName}},
+		{{$m.KitHttpServiceDecodeName}},
+		{{$m.KitHttpServiceEncodeName}},
+		opts...,
+	)).Methods("{{up $m.RawKit.Conf.UrlMethod}}")
+	{{end}}{{end}}
+
+	return r
+}
+
+{{range $m := $.Methods}}{{if $.HasMethodPath $m.Name}}
+{{if ($.EnableSwag $m.Name)}}
+// {{$m.KitRequest.ServiceName}}
+// @Summary {{$m.Annotation}}
+// @Description {{$m.Annotation}}
+{{- if $.Tags}}
+// @Tags {{$.Tags}} 
+{{- end}}
+// @Accept json
+// @Produce json
+{{- range $k,$v := $m.KitRequest.Path}}
+// @Param {{$v.ParamName}} path string true {{$v.Annotations}}
+{{- end}}
+{{- range $k, $v := $m.KitRequest.Query}}
+// @Param {{$v.ParamName}} query string false {{$v.Annotations}}
+{{- end}}
+{{- range $k, $v := $m.KitRequest.Header}}
+// @Param {{$v.ParamName}} header string false {{$v.Annotations}}
+{{- end}}
+{{- range $k, $v := $m.KitRequest.Form}}
+// @Param {{$v.ParamName}} formData {{$v.FormDataSwagType}} true {{$v.Annotations}}
+{{- end}}
+{{- if $m.KitRequest.RequestIsBody}}
+// @Param {{$m.KitRequest.RequestName}} body {{$m.KitRequest.RequestName}} 	true "http request body"
+{{- else}}
+{{- range $k, $v := $m.KitRequest.Body}}
+// @Param {{$v.ParamName}} body {{$v.ParamTypeName}} true {{$v.Annotations}}
+{{- end}}
+{{- end}}
+// @Success 200 {object} encode.Response{ {{- $m.SwagFieldData}}}
+// @Router {{$.MethodPath $m.Name}} [{{$m.RawKit.Conf.UrlMethod}}]{{end}}
+{{$m.KitRequestDecode}}
+{{end}}{{end}}

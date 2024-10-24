@@ -1,6 +1,8 @@
 package enum
 
 import (
+	"path/filepath"
+
 	"github.com/fitan/genx/common"
 	"github.com/fitan/genx/gen"
 	"github.com/fitan/jennifer/jen"
@@ -35,6 +37,6 @@ func (p Plug) Gen(option gen.Option, typeSpecMetas []gen.TypeSpecGoTypeMeta) err
 		j.Add(codes...)
 	}
 
-	common.WriteGO("enum.go", j.GoString())
+	common.WriteGO(filepath.Join(option.Dir, "enum.go"), j.GoString())
 	return nil
 }

@@ -1,0 +1,57 @@
+type CreateRequest struct {
+}
+
+type CreateListRequest struct {
+	Body []CreateRequest `json:"body" param:"body,body"`
+}
+
+type DeleteRequest struct {
+	{{.IdName}} {{.IdType}} `json:"{{.IdName}}" param:"path,{{lowerCamel .IdName}}"`
+}
+
+type DeleteListRequest struct {
+	{{plural (camel .IdName)}} []{{.IdType}} `query:"{{plural (lowerCamel .IdName)}}" param:"query,{{plural (lowerCamel .IdName)}}"`
+}
+
+type GetRequest struct {
+	{{.IdName}} {{.IdType}} `json:"{{.IdName}}" param:"path,{{lowerCamel .IdName}}"`
+}
+
+type ListRequest struct {
+	Page      int64    `json:"page" param:"query,page"`
+	PageSize  int64    `json:"pageSize" param:"query,pageSize"`
+	Order     string `json:"order" param:"query,order"`
+	ListQuery ListQuery `json:"query" param:",listQuery"`
+}
+
+// @gq {{.ModelName}}
+type ListQuery struct {
+}
+
+type UpdateRequest struct {
+	{{.IdName}} {{.IdType}} `json:"{{lowerCamel .IdName}}" param:"path,{{lowerCamel .IdName}}"`
+    Body UpdateBody `json:"body" param:"body,body"`
+}
+
+type UpdateBody struct {
+}
+
+type GetResponse struct {
+}
+
+type ListResponse []GetResponse
+
+type CreateResponse struct {
+}
+
+type CreateListResponse struct {
+}
+
+type DeleteResponse struct {
+}
+
+type DeleteListResponse struct {
+}
+
+type UpdateResponse struct {
+}

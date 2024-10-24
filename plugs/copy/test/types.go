@@ -66,6 +66,7 @@ type Select struct {
 }
 
 type NginxBody struct {
+	gorm.Model
 	Domain    string `gorm:"column:domain;comment:域名"`
 	Cluster   string `gorm:"column:cluster;comment:集群"`
 	ProjectID int    `gorm:"column:project_id;comment:项目ID"`
