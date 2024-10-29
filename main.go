@@ -5,7 +5,6 @@ package main
 
 import (
 	"embed"
-	"fmt"
 	"log/slog"
 	"os"
 	"time"
@@ -103,8 +102,6 @@ func main() {
 			if err != nil {
 				panic(err)
 			}
-
-			fmt.Println("gen finish !!!")
 
 			return nil
 		},

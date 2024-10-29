@@ -3,8 +3,6 @@ package mapstruct
 import (
 	"path/filepath"
 
-	"github.com/davecgh/go-spew/spew"
-	"github.com/fitan/genx/common"
 	"github.com/fitan/genx/gen"
 	"github.com/fitan/jennifer/jen"
 	"github.com/pkg/errors"
@@ -17,7 +15,7 @@ func (s Plug) Name() string {
 	return "@copy"
 }
 
-func (s Plug) Gen(option gen.Option, callGoTypeMetes []gen.CallGoTypeMeta) error {
+func (s Plug) Gen(option gen.Option, callGoTypeMetes []gen.CallGoTypeMeta) (res []gen.GenResult, err error) {
 	current := map[string]struct{}{}
 	j := jen.NewFile(option.Pkg.Name)
 	for _, v := range callGoTypeMetes {
@@ -27,17 +25,14 @@ func (s Plug) Gen(option gen.Option, callGoTypeMetes []gen.CallGoTypeMeta) error
 			current[v.Name] = struct{}{}
 		}
 		if len(v.Params) != 2 {
-			spew.Dump(v.Params)
-			panic("copy: params must be two")
-			return errors.New("copy: params must be two")
+			return nil, errors.New("copy: params must be two")
 		}
 
 		destType := v.Params[0]
 		srcType := v.Params[1]
 
 		if !destType.Pointer {
-			panic("copy: params must pointer")
-			return errors.New("copy: params must pointer")
+			return nil, errors.New("copy: params must pointer")
 		}
 
 		pkg := option.Pkg
@@ -80,7 +75,11 @@ func (s Plug) Gen(option gen.Option, callGoTypeMetes []gen.CallGoTypeMeta) error
 
 	}
 
-	common.WriteGO(filepath.Join(option.Dir, "copy.go"), j.GoString())
+	res = append(res, gen.GenResult{
+		FileName: filepath.Join(option.Dir, "copy.go"),
+		FileStr:  j.GoString(),
+		Cover:    true,
+	})
 
-	return nil
+	return
 }

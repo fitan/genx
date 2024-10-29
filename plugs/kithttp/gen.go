@@ -1,7 +1,6 @@
 package kithttp
 
 import (
-	"bytes"
 	"io/fs"
 	"path/filepath"
 	"regexp"
@@ -12,10 +11,9 @@ import (
 	"github.com/fitan/genx/gen"
 	"github.com/fitan/jennifer/jen"
 	"github.com/pkg/errors"
-	"github.com/sourcegraph/conc"
 )
 
-func ObserverGen(opt gen.Option, imd common.InterfaceMetaDate) error {
+func ObserverGen(opt gen.Option, imd common.InterfaceMetaDate) (res []gen.GenResult, err error) {
 
 	logFile, err := fs.ReadFile(opt.Static, "static/template/ce_log.tmpl")
 	if err != nil {
@@ -41,7 +39,7 @@ func ObserverGen(opt gen.Option, imd common.InterfaceMetaDate) error {
 	for _, v := range imd.Methods {
 		m, err := f(v)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 
 		methodMap[v.Name] = *m
@@ -57,12 +55,12 @@ func ObserverGen(opt gen.Option, imd common.InterfaceMetaDate) error {
 	logStr, err := common.GenFileByTemplate(opt.Static, "ce_log", tInput)
 	if err != nil {
 		err = errors.Wrapf(err, "gen file %s", logFile)
-		return err
+		return
 	}
 	traceStr, err := common.GenFileByTemplate(opt.Static, "ce_trace", tInput)
 	if err != nil {
 		err = errors.Wrapf(err, "gen file %s", traceFile)
-		return err
+		return
 	}
 
 	lJen := jen.NewFile(opt.Pkg.Name)
@@ -103,42 +101,22 @@ func ObserverGen(opt gen.Option, imd common.InterfaceMetaDate) error {
 	lJen.Id(logStr)
 	tJen.Id(traceStr)
 
-	var wg conc.WaitGroup
-
-	wg.Go(func() {
-		common.WriteGO(filepath.Join(opt.Dir, "logging.go"), lJen.GoString())
+	res = append(res, gen.GenResult{
+		FileName: filepath.Join(opt.Dir, "logging.go"),
+		FileStr:  lJen.GoString(),
+		Cover:    true,
 	})
 
-	wg.Go(func() {
-		common.WriteGO(filepath.Join(opt.Dir, "tracing.go"), tJen.GoString())
+	res = append(res, gen.GenResult{
+		FileName: filepath.Join(opt.Dir, "tracing.go"),
+		FileStr:  tJen.GoString(),
+		Cover:    true,
 	})
 
-	wg.Wait()
-
-	return nil
+	return
 }
 
-func Gen(opt gen.Option, imd common.InterfaceMetaDate) {
-	endpointFile, err := fs.ReadFile(opt.Static, "static/template/kit_endpoint.tmpl")
-	if err != nil {
-		panic(err)
-	}
-
-	httpFile, err := fs.ReadFile(opt.Static, "static/template/kit_http.tmpl")
-	if err != nil {
-		panic(err)
-	}
-
-	logFile, err := fs.ReadFile(opt.Static, "static/template/ce_log.tmpl")
-	if err != nil {
-		panic(err)
-	}
-
-	traceFile, err := fs.ReadFile(opt.Static, "static/template/ce_trace.tmpl")
-	if err != nil {
-		panic(err)
-	}
-
+func Gen(opt gen.Option, imd common.InterfaceMetaDate) (res []gen.GenResult, err error) {
 	methodMap := make(map[string]Method, 0)
 	f := func(m common.InterfaceMethod) (*Method, error) {
 		kit, err := NewKit(m.Doc)
@@ -175,55 +153,18 @@ func Gen(opt gen.Option, imd common.InterfaceMetaDate) {
 		Opt:     opt,
 	}
 
-	et, err := template.New("kit_endpoint").Funcs(helperFuncs).Parse(string(endpointFile))
+	eFile, err := common.GenFileByTemplate(opt.Static, "kit_endpoint", tInput)
 	if err != nil {
-		panic(err)
+		return
 	}
 
-	ht, err := template.New("kit_http").Funcs(helperFuncs).Parse(string(httpFile))
+	hFile, err := common.GenFileByTemplate(opt.Static, "kit_http", tInput)
 	if err != nil {
-		panic(err)
-	}
-
-	lt, err := template.New("ce_log").Funcs(helperFuncs).Parse(string(logFile))
-	if err != nil {
-		panic(err)
-	}
-
-	tt, err := template.New("ce_trace").Funcs(helperFuncs).Parse(string(traceFile))
-	if err != nil {
-		panic(err)
-	}
-
-	var eBuffer bytes.Buffer
-	var hBuffer bytes.Buffer
-	var lBuffer bytes.Buffer
-	var tBuffer bytes.Buffer
-	err = et.Execute(&eBuffer, tInput)
-	if err != nil {
-		panic(err)
-	}
-
-	err = ht.Execute(&hBuffer, tInput)
-	if err != nil {
-		panic(err)
-	}
-
-	err = lt.Execute(&lBuffer, tInput)
-
-	if err != nil {
-		panic(err)
-	}
-
-	err = tt.Execute(&tBuffer, tInput)
-	if err != nil {
-		panic(err)
+		return
 	}
 
 	eJen := jen.NewFile(opt.Pkg.Name)
 	hJen := jen.NewFile(opt.Pkg.Name)
-	lJen := jen.NewFile(opt.Pkg.Name)
-	tJen := jen.NewFile(opt.Pkg.Name)
 
 	importMap := map[string]string{
 		"encoding/json":                             "json",
@@ -245,15 +186,11 @@ func Gen(opt gen.Option, imd common.InterfaceMetaDate) {
 	for k, v := range importMap {
 		eJen.AddImport(k, v)
 		hJen.AddImport(k, v)
-		lJen.AddImport(k, v)
-		tJen.AddImport(k, v)
 	}
 
 	for _, v := range opt.Config.Imports {
 		eJen.AddImport(v.Path, v.Alias)
 		hJen.AddImport(v.Path, v.Alias)
-		lJen.AddImport(v.Path, v.Alias)
-		tJen.AddImport(v.Path, v.Alias)
 	}
 
 	// for k, _ := range opt.Pkg.Imports {
@@ -261,30 +198,22 @@ func Gen(opt gen.Option, imd common.InterfaceMetaDate) {
 	// hJen.AddImport(k, "")
 	// }
 
-	eJen.Id(eBuffer.String())
-	hJen.Id(hBuffer.String())
-	lJen.Id(lBuffer.String())
-	tJen.Id(tBuffer.String())
+	eJen.Id(eFile)
+	hJen.Id(hFile)
 
-	var wg conc.WaitGroup
-
-	wg.Go(func() {
-		common.WriteGO(filepath.Join(opt.Dir, "endpoint.go"), eJen.GoString())
+	res = append(res, gen.GenResult{
+		FileName: filepath.Join(opt.Dir, "endpoint.go"),
+		FileStr:  eJen.GoString(),
+		Cover:    true,
 	})
 
-	wg.Go(func() {
-		common.WriteGO(filepath.Join(opt.Dir, "http.go"), hJen.GoString())
+	res = append(res, gen.GenResult{
+		FileName: filepath.Join(opt.Dir, "http.go"),
+		FileStr:  hJen.GoString(),
+		Cover:    true,
 	})
 
-	wg.Go(func() {
-		common.WriteGO(filepath.Join(opt.Dir, "logging.go"), lJen.GoString())
-	})
-
-	wg.Go(func() {
-		common.WriteGO(filepath.Join(opt.Dir, "tracing.go"), tJen.GoString())
-	})
-
-	wg.Wait()
+	return
 }
 
 func genEndpointConst(methodNameList []string) jen.Code {

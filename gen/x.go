@@ -2,18 +2,17 @@ package gen
 
 import (
 	"embed"
-	"fmt"
 	"go/ast"
 	"go/types"
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/fitan/genx/common"
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/v2"
+	"github.com/samber/lo"
 	"github.com/sourcegraph/conc"
 	"golang.org/x/exp/slog"
 	"golang.org/x/tools/go/ast/astutil"
@@ -27,7 +26,7 @@ type X struct {
 	Metas  Metas
 	Plugs  Plugs
 	WG     *conc.WaitGroup
-	Model  *Model
+	TUI    *Model
 }
 
 type Metas struct {
@@ -81,36 +80,11 @@ func (x *X) Gen() {
 	x.funcGen()
 	x.callGen()
 	x.WG.Wait()
+
+	x.TUI.PkgEnd(UpdateTreeReq{
+		PkgName: x.Option.Pkg.PkgPath,
+	})
 	return
-}
-
-func (x *X) model(name string, f func() error) {
-	key := fmt.Sprintf("%s/%s", x.Option.Pkg, name)
-	x.Model.AddMsg(key, ModelMsg{
-		PkgName:  x.Option.Pkg.PkgPath,
-		PlugName: name,
-		Msg:      "running",
-	})
-
-	timeStart := time.Now()
-	slog.Info("call gen start", slog.String("name", strings.ToUpper(name)))
-	err := f()
-
-	if err != nil {
-		slog.Error("impl gen error", err, slog.String("name", strings.ToUpper(name)))
-		x.Model.UpdateMsg(key, ModelMsg{
-			PkgName:  x.Option.Pkg.PkgPath,
-			PlugName: name,
-			Msg:      err.Error(),
-		})
-	}
-	slog.Info("call gen end", slog.String("name", strings.ToUpper(name)), slog.Duration("time", time.Since(timeStart)))
-
-	x.Model.UpdateMsg(key, ModelMsg{
-		PkgName:  x.Option.Pkg.PkgPath,
-		PlugName: name,
-		Msg:      "success",
-	})
 }
 
 func (x *X) parse() {
@@ -240,9 +214,7 @@ func (x *X) implGen() {
 		if ok {
 			modelName := v.Name()
 			x.WG.Go(func() {
-				x.model(modelName, func() error {
-					return v.Gen(x.Option, metas)
-				})
+				x.UpdateTUI(modelName, func() (gens []GenResult, err error) { return v.Gen(x.Option, metas) })
 			})
 		}
 	}
@@ -254,13 +226,7 @@ func (x *X) callGen() {
 		if ok {
 			modelName := v.Name()
 			x.WG.Go(func() {
-				x.model(modelName, func() error {
-					err := v.Gen(x.Option, metas)
-					if err != nil {
-						panic(err)
-					}
-					return err
-				})
+				x.UpdateTUI(modelName, func() (gens []GenResult, err error) { return v.Gen(x.Option, metas) })
 			})
 		}
 	}
@@ -272,9 +238,7 @@ func (x *X) typeGen() {
 		if ok {
 			modelName := v.Name()
 			x.WG.Go(func() {
-				x.model(modelName, func() error {
-					return v.Gen(x.Option, metas)
-				})
+				x.UpdateTUI(modelName, func() (gens []GenResult, err error) { return v.Gen(x.Option, metas) })
 			})
 		}
 	}
@@ -286,9 +250,7 @@ func (x *X) structGen() {
 		if ok {
 			modelName := v.Name()
 			x.WG.Go(func() {
-				x.model(modelName, func() error {
-					return v.Gen(x.Option, metas)
-				})
+				x.UpdateTUI(modelName, func() (gens []GenResult, err error) { return v.Gen(x.Option, metas) })
 			})
 		}
 	}
@@ -300,9 +262,7 @@ func (x *X) funcGen() {
 		if ok {
 			modelName := v.Name()
 			x.WG.Go(func() {
-				x.model(modelName, func() error {
-					return v.Gen(x.Option, metas)
-				})
+				x.UpdateTUI(modelName, func() (gens []GenResult, err error) { return v.Gen(x.Option, metas) })
 			})
 		}
 	}
@@ -314,18 +274,72 @@ func (x *X) typeSpecGen() {
 		if ok {
 			modelName := v.Name()
 			x.WG.Go(func() {
-				x.model(modelName, func() error {
-					return v.Gen(x.Option, metas)
-				})
+				x.UpdateTUI(modelName, func() (gens []GenResult, err error) { return v.Gen(x.Option, metas) })
 			})
 		}
 	}
 }
 
-func NewXByPkg(static embed.FS, p *packages.Package, model *Model, config *Config) (*X, error) {
+func (x *X) UpdateTUI(plugName string, f func() (gens []GenResult, err error)) {
+
+	plugIndex := x.TUI.PlugStart(UpdateTreeReq{
+		PkgName:  x.Option.Pkg.PkgPath,
+		PlugName: plugName,
+	})
+
+	gens, err := f()
+	if err != nil {
+		x.TUI.PlugEnd(plugIndex, UpdateTreeReq{
+			PkgName:  x.Option.Pkg.PkgPath,
+			PlugName: plugName,
+			FileName: "",
+			Status:   2,
+			Err:      err.Error(),
+		})
+		return
+	}
+
+	gw := conc.NewWaitGroup()
+
+	for _, gen := range gens {
+		gw.Go(func() {
+			fileIndex := x.TUI.FileStart(plugIndex, UpdateTreeReq{
+				PkgName:  x.Option.Pkg.PkgPath,
+				PlugName: plugName,
+				FileName: gen.FileName,
+				Status:   0,
+				Err:      "",
+			})
+
+			cover := common.WriteGoWithOpt(gen.FileName, gen.FileStr, common.WriteOpt{
+				Cover: gen.Cover,
+			})
+
+			x.TUI.FileEnd(plugIndex, fileIndex, UpdateTreeReq{
+				PkgName:  x.Option.Pkg.PkgPath,
+				PlugName: plugName,
+				FileName: gen.FileName,
+				Status:   lo.Ternary(cover, 1, 3),
+				Err:      "",
+			})
+
+		})
+	}
+
+	gw.Wait()
+
+	x.TUI.PlugEnd(plugIndex, UpdateTreeReq{
+		PkgName:  x.Option.Pkg.PkgPath,
+		PlugName: plugName,
+		Status:   1,
+	})
+
+	return
+}
+
+func NewXByPkg(static embed.FS, p *packages.Package, tui *Model, config *Config) (*X, error) {
 	return &X{
-		Model: model,
-		WG:    conc.NewWaitGroup(),
+		WG: conc.NewWaitGroup(),
 		Option: Option{
 			Static:          static,
 			Pkg:             p,
@@ -362,10 +376,11 @@ func NewXByPkg(static embed.FS, p *packages.Package, model *Model, config *Confi
 			Func:     make([]FuncPlugImpl, 0),
 			Call:     make([]CallPlugImpl, 0),
 		},
+		TUI: tui,
 	}, nil
 }
 
-func NewX(static embed.FS, dir string, model *Model) (res []*X, err error) {
+func NewX(static embed.FS, dir string, tui *Model) (res []*X, err error) {
 	config := findGenXConfig()
 
 	ps, err := common.LoadPkg(dir)
@@ -374,7 +389,7 @@ func NewX(static embed.FS, dir string, model *Model) (res []*X, err error) {
 	}
 
 	for _, p := range ps {
-		x, err := NewXByPkg(static, p, model, config)
+		x, err := NewXByPkg(static, p, tui, config)
 		if err != nil {
 			return nil, err
 		}

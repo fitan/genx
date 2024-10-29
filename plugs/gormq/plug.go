@@ -77,7 +77,7 @@ func (p *Plug) Name() string {
 	return FuncName
 }
 
-func (p *Plug) Gen(option gen.Option, implGoTypeMetes []gen.StructGoTypeMeta) (err error) {
+func (p *Plug) Gen(option gen.Option, implGoTypeMetes []gen.StructGoTypeMeta) (res []gen.GenResult, err error) {
 	j := jen.NewFile(option.Pkg.Name)
 	j.AddImport("gorm.io/gorm", "")
 	for _, v := range option.Imports {
@@ -108,6 +108,11 @@ func (p *Plug) Gen(option gen.Option, implGoTypeMetes []gen.StructGoTypeMeta) (e
 	//}
 
 	Gen(j, option, implGoTypeMetes)
+	res = append(res, gen.GenResult{
+		FileName: filepath.Join(option.Dir, "gorm_scope.go"),
+		FileStr:  j.GoString(),
+		Cover:    true,
+	})
 	common.WriteGO(filepath.Join(option.Dir, "gorm_scope.go"), j.GoString())
 	return
 }

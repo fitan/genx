@@ -9,7 +9,7 @@ import (
 
 type CallPlugImpl interface {
 	Name() string
-	Gen(option Option, callGoTypeMetes []CallGoTypeMeta) error
+	Gen(option Option, callGoTypeMetes []CallGoTypeMeta) ([]GenResult, error)
 }
 
 type CallMeta struct {
@@ -25,7 +25,7 @@ type CallGoTypeMeta struct {
 
 type FuncPlugImpl interface {
 	Name() string
-	Gen(option Option, funcGoTypeMetes []FuncGoTypeMeta) error
+	Gen(option Option, funcGoTypeMetes []FuncGoTypeMeta) ([]GenResult, error)
 }
 
 type FuncMeta struct {
@@ -41,7 +41,7 @@ type FuncGoTypeMeta struct {
 
 type InterfacePlugImpl interface {
 	Name() string
-	Gen(option Option, implGoTypeMetes []InterfaceGoTypeMeta) error
+	Gen(option Option, implGoTypeMetes []InterfaceGoTypeMeta) ([]GenResult, error)
 }
 
 type ImplMeta struct {
@@ -57,7 +57,7 @@ type InterfaceGoTypeMeta struct {
 
 type StructPlugImpl interface {
 	Name() string
-	Gen(option Option, structGoTypeMetes []StructGoTypeMeta) error
+	Gen(option Option, structGoTypeMetes []StructGoTypeMeta) ([]GenResult, error)
 }
 
 type StructMeta struct {
@@ -73,7 +73,7 @@ type StructGoTypeMeta struct {
 
 type TypePlugImpl interface {
 	Name() string
-	Gen(option Option, typeGoTypeMetes []TypeGoTypeMeta) error
+	Gen(option Option, typeGoTypeMetes []TypeGoTypeMeta) ([]GenResult, error)
 }
 
 type TypeMeta struct {
@@ -88,7 +88,7 @@ type TypeGoTypeMeta struct {
 
 type TypeSpecPlugImpl interface {
 	Name() string
-	Gen(option Option, typeSpecMetas []TypeSpecGoTypeMeta) error
+	Gen(option Option, typeSpecMetas []TypeSpecGoTypeMeta) ([]GenResult, error)
 }
 
 type TypeSpecMeta struct {

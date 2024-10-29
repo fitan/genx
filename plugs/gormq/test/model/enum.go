@@ -1,6 +1,6 @@
 // Code generated . DO NOT EDIT.
 
-package types
+package model
 
 import (
 	"fmt"

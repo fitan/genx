@@ -126,6 +126,7 @@ func (d stCopyCopy) testNginxDomainLocationItemToTestLocationItem(src NginxDomai
 	// basic map
 	dest.ConfID = src.ConfID
 	dest.HeaderHost = src.HeaderHost
+	dest.ID = src.Model.ID
 	dest.Key = src.Key
 	dest.Rewrite = src.Rewrite
 	dest.SubDirectoryPath = src.SubDirectoryPath
@@ -156,6 +157,7 @@ func (d stCopyCopy) testNginxDomainUpstreamItemToTestUpstreamItem(src NginxDomai
 	dest.CheckRise = src.CheckRise
 	dest.CheckTimeout = src.CheckTimeout
 	dest.ConfID = src.ConfID
+	dest.ID = src.Model.ID
 	dest.LoadbalanceType = src.LoadbalanceType
 	dest.LoadbalanceValue = src.LoadbalanceValue
 	dest.Name = src.Name
@@ -311,6 +313,7 @@ func (d nginxDomain2NginxBodyDTOCopy) testNginxDomainLocationItemToTestLocationI
 	// basic map
 	dest.ConfID = src.ConfID
 	dest.HeaderHost = src.HeaderHost
+	dest.ID = src.Model.ID
 	dest.Key = src.Key
 	dest.Rewrite = src.Rewrite
 	dest.SubDirectoryPath = src.SubDirectoryPath
@@ -341,6 +344,7 @@ func (d nginxDomain2NginxBodyDTOCopy) testNginxDomainUpstreamItemToTestUpstreamI
 	dest.CheckRise = src.CheckRise
 	dest.CheckTimeout = src.CheckTimeout
 	dest.ConfID = src.ConfID
+	dest.ID = src.Model.ID
 	dest.LoadbalanceType = src.LoadbalanceType
 	dest.LoadbalanceValue = src.LoadbalanceValue
 	dest.Name = src.Name

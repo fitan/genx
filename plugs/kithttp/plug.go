@@ -13,19 +13,24 @@ func (p *Plug) Name() string {
 	return "@kit"
 }
 
-func (p *Plug) Gen(option gen.Option, implGoTypeMetes []gen.InterfaceGoTypeMeta) error {
+func (p *Plug) Gen(option gen.Option, implGoTypeMetes []gen.InterfaceGoTypeMeta) (res []gen.GenResult, err error) {
 
 	parseImpl := common.NewInterfaceSerialize(option.Pkg)
 	for _, v := range implGoTypeMetes {
 		meta, err := parseImpl.Parse(v.Obj, &v.Doc)
 		if err != nil {
 			slog.Error("parseImpl.Parse", err, slog.String("name", v.Obj.String()))
-			return err
+			return nil, err
 		}
 
-		Gen(option, meta)
+		gens, err := Gen(option, meta)
+		if err != nil {
+			return nil, err
+		}
+
+		res = append(res, gens...)
 	}
-	return nil
+	return
 }
 
 type ObserverPlug struct {
@@ -35,19 +40,22 @@ func (p *ObserverPlug) Name() string {
 	return "@observer"
 }
 
-func (p *ObserverPlug) Gen(option gen.Option, implGoTypeMetes []gen.InterfaceGoTypeMeta) error {
+func (p *ObserverPlug) Gen(option gen.Option, implGoTypeMetes []gen.InterfaceGoTypeMeta) (res []gen.GenResult, err error) {
 	parseImpl := common.NewInterfaceSerialize(option.Pkg)
 	for _, v := range implGoTypeMetes {
 		meta, err := parseImpl.Parse(v.Obj, &v.Doc)
 		if err != nil {
 			slog.Error("parseImpl.Parse", err, slog.String("name", v.Obj.String()))
-			return err
+			return nil, err
 		}
 
-		err = ObserverGen(option, meta)
+		gens, err := ObserverGen(option, meta)
+
 		if err != nil {
-			return err
+			return nil, err
 		}
+
+		res = append(res, gens...)
 	}
-	return nil
+	return
 }

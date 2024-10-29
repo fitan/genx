@@ -156,7 +156,7 @@ func (o OrderMap) GetByField(f Field) (res Field, has bool) {
 		// slog.Info("getByField eq name", "fName", fName, "vName", vName, "sourceName", f.Name, "copyName", f.CopyName, "doc", f.Doc)
 		if fName == vName {
 			if slices.Equal(lo.DropRight(v.AliasPath, 1), lo.DropRight(f.AliasPath, 1)) {
-				fmt.Println("fName == vName", fName, vName, lo.DropRight(v.AliasPath, 1), lo.DropRight(f.AliasPath, 1))
+				// fmt.Println("fName == vName", fName, vName, lo.DropRight(v.AliasPath, 1), lo.DropRight(f.AliasPath, 1))
 				res = v
 				has = true
 				// 最高优先级直接返回
@@ -179,9 +179,9 @@ func (o OrderMap) GetByField(f Field) (res Field, has bool) {
 }
 
 func DepthFind(dest Field, destIndex int, src Field, srcIndex int) bool {
-	if destIndex == 0 {
+	/* if destIndex == 0 {
 		fmt.Println("first", "destIndex", dest.AliasPath, dest.EmbeddedIndex, "srcIndex", src.AliasPath, src.EmbeddedIndex)
-	}
+	} */
 	if destIndex > len(dest.AliasPath)-1 && srcIndex > len(src.AliasPath)-1 {
 		return true
 	}
@@ -640,7 +640,7 @@ func (d *Copy) GenMap() jen.Statement {
 		}
 		srcV, ok := d.Src.MapMap.GetByField(v)
 		if !ok {
-			fmt.Printf("not found %s in %s\n", v.Name, d.SumPath())
+			// fmt.Printf("not found %s in %s\n", v.Name, d.SumPath())
 			continue
 		}
 		//if v.Doc != nil {

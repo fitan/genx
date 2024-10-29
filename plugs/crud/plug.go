@@ -2,13 +2,10 @@ package crud
 
 import (
 	"fmt"
-	"log/slog"
 	"path/filepath"
 
-	"github.com/fitan/genx/common"
 	"github.com/fitan/genx/gen"
 	"github.com/fitan/jennifer/jen"
-	"github.com/sourcegraph/conc"
 )
 
 type Plug struct {
@@ -18,7 +15,7 @@ func (s Plug) Name() string {
 	return "@crud"
 }
 
-func (s Plug) http(option gen.Option, structGoTypeMetas []gen.StructGoTypeMeta) error {
+func (s Plug) http(option gen.Option, structGoTypeMetas []gen.StructGoTypeMeta) (res []gen.GenResult, err error) {
 
 	crudHttpJ := jen.NewFile(option.Pkg.Name)
 	crudHttpTypeJ := jen.NewFile(option.Pkg.Name)
@@ -38,33 +35,28 @@ func (s Plug) http(option gen.Option, structGoTypeMetas []gen.StructGoTypeMeta) 
 		StructGoTypeMetas:    structGoTypeMetas,
 	}
 
-	err := crud.Gen()
+	err = crud.Gen()
 	if err != nil {
-		slog.Error(err.Error())
-		return nil
+		return
 	}
 
-	c := conc.NewWaitGroup()
-	c.Go(func() {
-		common.WriteGoByOpt(filepath.Join(option.Dir, "crud_http_types.go"), crudHttpTypeJ.GoString(), common.WriteOpt{
-			Cover: false,
-		})
-		// common.WriteGO(filepath.Join(option.Dir, "crud_http_types.go"), crudHttpTypeJ.GoString())
+	res = append(res, gen.GenResult{
+		FileName: filepath.Join(option.Dir, "crud_http_types.go"),
+		FileStr:  crudHttpTypeJ.GoString(),
+		Cover:    false,
 	})
 
-	c.Go(func() {
-		common.WriteGoByOpt(filepath.Join(option.Dir, "crud_http_service.go"), crudHttpJ.GoString(), common.WriteOpt{
-			Cover: false,
-		})
+	res = append(res, gen.GenResult{
+		FileName: filepath.Join(option.Dir, "crud_http_service.go"),
+		FileStr:  crudHttpJ.GoString(),
+		Cover:    false,
 	})
 
-	c.Wait()
-
-	return nil
+	return
 
 }
 
-func (s Plug) gorm(option gen.Option, structGoTypeMetas []gen.StructGoTypeMeta) error {
+func (s Plug) gorm(option gen.Option, structGoTypeMetas []gen.StructGoTypeMeta) (res []gen.GenResult, err error) {
 	crudGormJ := jen.NewFile(option.Pkg.Name)
 	crudGormTypeJ := jen.NewFile(option.Pkg.Name)
 	crudGormScopeJ := jen.NewFile(option.Pkg.Name)
@@ -83,51 +75,45 @@ func (s Plug) gorm(option gen.Option, structGoTypeMetas []gen.StructGoTypeMeta) 
 		StructGoTypeMetas: structGoTypeMetas,
 	}
 
-	err := crud.Gen()
+	err = crud.Gen()
 	if err != nil {
-		slog.Error(err.Error())
-		return err
+		return
 	}
 
-	c := conc.NewWaitGroup()
-
-	c.Go(func() {
-		common.WriteGO(filepath.Join(option.Dir, "crud_gorm_types.go"), crudGormTypeJ.GoString())
+	res = append(res, gen.GenResult{
+		FileName: filepath.Join(option.Dir, "crud_gorm_types.go"),
+		FileStr:  crudGormTypeJ.GoString(),
+		Cover:    false,
 	})
 
-	c.Go(func() {
-		common.WriteGO(filepath.Join(option.Dir, "crud_gorm_service.go"), crudGormJ.GoString())
+	res = append(res, gen.GenResult{
+		FileName: filepath.Join(option.Dir, "crud_gorm_service.go"),
+		FileStr:  crudGormJ.GoString(),
+		Cover:    false,
 	})
 
-	c.Wait()
-
-	return nil
+	return
 }
 
-func (s Plug) Gen(option gen.Option, structGoTypeMetas []gen.StructGoTypeMeta) error {
+func (s Plug) Gen(option gen.Option, structGoTypeMetas []gen.StructGoTypeMeta) (res []gen.GenResult, err error) {
 	for _, v := range structGoTypeMetas {
 
 		typeName, has := v.Doc.ByFuncNameAndArgName("@crud", "type")
 		if !has {
-			slog.Error("@crud type must be set")
-			return fmt.Errorf("@crud type must be set")
+			err = fmt.Errorf("@crud type must be set")
+			return
 		}
 
 		switch typeName {
 		case "http":
-			err := s.http(option, structGoTypeMetas)
-			if err != nil {
-				return err
-			}
+			return s.http(option, structGoTypeMetas)
 		case "gorm":
-			err := s.gorm(option, structGoTypeMetas)
-			if err != nil {
-				return err
-			}
+			return s.gorm(option, structGoTypeMetas)
 		default:
-			return fmt.Errorf("@crud tag value must be http or gorm")
+			err = fmt.Errorf("@crud type %s not support", typeName)
+			return
 		}
 	}
 
-	return nil
+	return
 }

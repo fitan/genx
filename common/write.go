@@ -30,18 +30,22 @@ type WriteOpt struct {
 	Cover bool
 }
 
-func WriteGoWithOpt(name, s string, opt WriteOpt) {
+func WriteGoWithOpt(name, s string, opt WriteOpt) (cover bool) {
 	if opt.Cover {
 		WriteGO(name, s)
+		return true
 	} else {
 		_, err := os.Stat(name)
 		if err != nil {
 			if os.IsNotExist(err) {
 				WriteGO(name, s)
+				return false
 			} else {
 				slog.Error("os.Stat err", err, "gen file name", name)
 				return
 			}
 		}
+
+		return false
 	}
 }

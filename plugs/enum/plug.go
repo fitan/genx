@@ -15,7 +15,7 @@ func (p Plug) Name() string {
 	return "@enum"
 }
 
-func (p Plug) Gen(option gen.Option, typeSpecMetas []gen.TypeSpecGoTypeMeta) error {
+func (p Plug) Gen(option gen.Option, typeSpecMetas []gen.TypeSpecGoTypeMeta) (res []gen.GenResult, err error) {
 	j := jen.NewFile(option.Pkg.Name)
 	j.HeaderComment("Code generated . DO NOT EDIT.")
 	common.JenAddImports(option.Pkg, j)
@@ -31,12 +31,17 @@ func (p Plug) Gen(option gen.Option, typeSpecMetas []gen.TypeSpecGoTypeMeta) err
 		}
 		codes, err := enum.Gen()
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		j.Add(codes...)
 	}
 
-	common.WriteGO(filepath.Join(option.Dir, "enum.go"), j.GoString())
-	return nil
+	res = append(res, gen.GenResult{
+		FileName: filepath.Join(option.Dir, "enum.go"),
+		FileStr:  j.GoString(),
+		Cover:    true,
+	})
+
+	return
 }

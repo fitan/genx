@@ -237,6 +237,7 @@ func (k KitHttpClient) Gen(j *jen.File) {
 	j.AddImport("github.com/gorilla/mux", "")
 	j.AddImport("github.com/pkg/errors", "")
 	j.AddImport("github.com/spf13/cast", "")
+	j.AddImport("github.com/go-kit/log", "")
 	j.AddImport("io", "")
 	j.AddImport("net/http", "")
 	j.AddImport("net/url", "")

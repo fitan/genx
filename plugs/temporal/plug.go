@@ -4,7 +4,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/fitan/genx/common"
 	"github.com/fitan/genx/gen"
 	"github.com/fitan/jennifer/jen"
 )
@@ -18,7 +17,7 @@ func (p *Plug) Name() string {
 	return FuncName
 }
 
-func (p *Plug) Gen(option gen.Option, implGoTypeMetes []gen.InterfaceGoTypeMeta) (err error) {
+func (p *Plug) Gen(option gen.Option, implGoTypeMetes []gen.InterfaceGoTypeMeta) (res []gen.GenResult, err error) {
 	j := jen.NewFile(option.Pkg.Name)
 	for _, v := range option.Imports {
 		if v.Name != nil {
@@ -48,6 +47,11 @@ func (p *Plug) Gen(option gen.Option, implGoTypeMetes []gen.InterfaceGoTypeMeta)
 	//}
 
 	Gen(j, option, implGoTypeMetes)
-	common.WriteGO(filepath.Join(option.Dir, "temporal.go"), j.GoString())
+
+	res = append(res, gen.GenResult{
+		FileName: filepath.Join(option.Dir, "temporal.go"),
+		FileStr:  j.GoString(),
+		Cover:    true,
+	})
 	return
 }
