@@ -18,6 +18,7 @@ type TreeNode struct {
 	// 0 running
 	// 1 success
 	// 2 failed
+	// 3 exist
 	Status    int
 	Err       string
 	StartTime time.Time
@@ -77,6 +78,7 @@ type Model struct {
 	m       sync.Mutex
 	down    chan struct{}
 	endDown chan struct{}
+	teaCmds []tea.Cmd
 }
 
 func NewModel() *Model {
@@ -93,6 +95,7 @@ func NewModel() *Model {
 		m:       sync.Mutex{},
 		down:    make(chan struct{}),
 		endDown: make(chan struct{}),
+		teaCmds: make([]tea.Cmd, 0),
 	}
 }
 
@@ -122,7 +125,7 @@ func (m *Model) Init() tea.Cmd {
 func (m *Model) PkgEnd(req UpdateTreeReq) {
 	m.m.Lock()
 	defer m.m.Unlock()
-	index, ok := m.hasPkg(req)
+	index, ok := m.hasNode(m.tree.Children, req.PkgName)
 	if !ok {
 		return
 	}
@@ -130,24 +133,24 @@ func (m *Model) PkgEnd(req UpdateTreeReq) {
 	m.tree.Children[index].EndTime = lo.ToPtr(time.Now())
 }
 
-func (m *Model) hasPkg(req UpdateTreeReq) (int, bool) {
-	_, index, ok := lo.FindIndexOf(m.tree.Children, func(item TreeNode) bool {
-		return item.Text == req.PkgName
+func (m *Model) hasNode(nodes []TreeNode, name string) (int, bool) {
+	_, index, ok := lo.FindIndexOf(nodes, func(item TreeNode) bool {
+		return item.Text == name
 	})
 
 	return index, ok
 }
 
-func (m *Model) PlugStart(req UpdateTreeReq) int {
+func (m *Model) PlugStart(req UpdateTreeReq) {
 	m.m.Lock()
 	defer m.m.Unlock()
-	index, ok := m.hasPkg(req)
-	if !ok {
+	pkgIndex, pkgOk := m.hasNode(m.tree.Children, req.PkgName)
+	if !pkgOk {
 		m.tree.Children = append(m.tree.Children, TreeNode{Text: req.PkgName, Status: 0, Children: []TreeNode{}, Err: req.Err, StartTime: time.Now()})
-		index = len(m.tree.Children) - 1
+		pkgIndex = len(m.tree.Children) - 1
 	}
 
-	m.tree.Children[index].Children = append(m.tree.Children[index].Children, TreeNode{
+	m.tree.Children[pkgIndex].Children = append(m.tree.Children[pkgIndex].Children, TreeNode{
 		Text:      req.PlugName,
 		Children:  []TreeNode{},
 		Status:    0,
@@ -155,25 +158,27 @@ func (m *Model) PlugStart(req UpdateTreeReq) int {
 		StartTime: time.Now(),
 	})
 
-	return len(m.tree.Children[index].Children) - 1
 }
 
-func (m *Model) PlugEnd(plugIndex int, req UpdateTreeReq) {
+func (m *Model) PlugEnd(req UpdateTreeReq) {
 	m.m.Lock()
 	defer m.m.Unlock()
 
-	pkgIndex, _ := m.hasPkg(req)
+	pkgIndex, _ := m.hasNode(m.tree.Children, req.PkgName)
+
+	plugIndex, _ := m.hasNode(m.tree.Children[pkgIndex].Children, req.PlugName)
 
 	m.tree.Children[pkgIndex].Children[plugIndex].Status = req.Status
 	m.tree.Children[pkgIndex].Children[plugIndex].Err = req.Err
 	m.tree.Children[pkgIndex].Children[plugIndex].EndTime = lo.ToPtr(time.Now())
 }
 
-func (m *Model) FileStart(plugIndex int, req UpdateTreeReq) int {
+func (m *Model) FileStart(req UpdateTreeReq) {
 	m.m.Lock()
 	defer m.m.Unlock()
 
-	pkgIndex, _ := m.hasPkg(req)
+	pkgIndex, _ := m.hasNode(m.tree.Children, req.PkgName)
+	plugIndex, _ := m.hasNode(m.tree.Children[pkgIndex].Children, req.PlugName)
 
 	m.tree.Children[pkgIndex].Children[plugIndex].Children = append(m.tree.Children[pkgIndex].Children[plugIndex].Children, TreeNode{
 		Text:      req.FileName,
@@ -182,18 +187,45 @@ func (m *Model) FileStart(plugIndex int, req UpdateTreeReq) int {
 		Err:       req.Err,
 		StartTime: time.Now(),
 	})
-
-	return len(m.tree.Children[pkgIndex].Children[plugIndex].Children) - 1
 }
 
-func (m *Model) FileEnd(plugIndex, fileIndex int, req UpdateTreeReq) {
+func (m *Model) FileEnd(req UpdateTreeReq) {
 	m.m.Lock()
 	defer m.m.Unlock()
-	pkgIndex, _ := m.hasPkg(req)
+	pkgIndex, _ := m.hasNode(m.tree.Children, req.PkgName)
+	plugIndex, _ := m.hasNode(m.tree.Children[pkgIndex].Children, req.PlugName)
+	fileIndex, _ := m.hasNode(m.tree.Children[pkgIndex].Children[plugIndex].Children, req.FileName)
 
-	m.tree.Children[pkgIndex].Children[plugIndex].Children[fileIndex].Status = req.Status
+	fileNode := m.tree.Children[pkgIndex].Children[plugIndex].Children[fileIndex]
+
+	switch req.Status {
+	case 3:
+		m.teaCmds = append(m.teaCmds, tea.Printf("%s %s %s",
+			existStyle.Render("exist"),
+			req.FileName,
+			time.Since(fileNode.StartTime).String()))
+	case 1:
+		m.teaCmds = append(m.teaCmds, tea.Printf("%s %s %s",
+			healthyStyle.Render("✔"),
+			req.FileName,
+			time.Since(fileNode.StartTime).String()))
+	case 2:
+		m.teaCmds = append(m.teaCmds, tea.Printf("%s %s %s",
+			errStyle.Render("✗"),
+			req.FileName,
+			time.Since(fileNode.StartTime).String()))
+	default:
+		m.teaCmds = append(m.teaCmds, tea.Printf("%s %s %s",
+			unknownStyle.Render("unknown"),
+			req.FileName,
+			time.Since(fileNode.StartTime).String()))
+	}
+
+	m.tree.Children[pkgIndex].Children[plugIndex].Children = lo.DropByIndex(m.tree.Children[pkgIndex].Children[plugIndex].Children, fileIndex)
+
+	/* m.tree.Children[pkgIndex].Children[plugIndex].Children[fileIndex].Status = req.Status
 	m.tree.Children[pkgIndex].Children[plugIndex].Children[fileIndex].Err = req.Err
-	m.tree.Children[pkgIndex].Children[plugIndex].Children[fileIndex].EndTime = lo.ToPtr(time.Now())
+	m.tree.Children[pkgIndex].Children[plugIndex].Children[fileIndex].EndTime = lo.ToPtr(time.Now()) */
 }
 
 func (m *Model) View() string {
@@ -203,10 +235,14 @@ func (m *Model) View() string {
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch v := msg.(type) {
 	case spinner.TickMsg:
+		m.m.Lock()
+		defer m.m.Unlock()
 		var cmd tea.Cmd
 		m.Spinner, cmd = m.Spinner.Update(msg)
 		// m.TickUpdateMsgTime()
-		return m, cmd
+		cmds := append(m.teaCmds, cmd)
+		m.teaCmds = make([]tea.Cmd, 0)
+		return m, tea.Batch(cmds...)
 	case tea.KeyMsg:
 		switch v.String() {
 		case "ctrl+c", "q":
@@ -232,9 +268,10 @@ var baseStyle = lipgloss.NewStyle()
 /* 	BorderStyle(lipgloss.NormalBorder()).
 BorderForeground(lipgloss.Color("240") )*/
 
-var healthyStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("2"))
-var errStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("9"))
-var unknownStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("8"))
+var healthyStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("42"))
+var errStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("196"))
+var unknownStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("226"))
+var existStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("214"))
 
 type UpdateTreeReq struct {
 	PkgName  string

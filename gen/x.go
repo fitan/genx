@@ -282,14 +282,14 @@ func (x *X) typeSpecGen() {
 
 func (x *X) UpdateTUI(plugName string, f func() (gens []GenResult, err error)) {
 
-	plugIndex := x.TUI.PlugStart(UpdateTreeReq{
+	x.TUI.PlugStart(UpdateTreeReq{
 		PkgName:  x.Option.Pkg.PkgPath,
 		PlugName: plugName,
 	})
 
 	gens, err := f()
 	if err != nil {
-		x.TUI.PlugEnd(plugIndex, UpdateTreeReq{
+		x.TUI.PlugEnd(UpdateTreeReq{
 			PkgName:  x.Option.Pkg.PkgPath,
 			PlugName: plugName,
 			FileName: "",
@@ -303,7 +303,7 @@ func (x *X) UpdateTUI(plugName string, f func() (gens []GenResult, err error)) {
 
 	for _, gen := range gens {
 		gw.Go(func() {
-			fileIndex := x.TUI.FileStart(plugIndex, UpdateTreeReq{
+			x.TUI.FileStart(UpdateTreeReq{
 				PkgName:  x.Option.Pkg.PkgPath,
 				PlugName: plugName,
 				FileName: gen.FileName,
@@ -315,7 +315,7 @@ func (x *X) UpdateTUI(plugName string, f func() (gens []GenResult, err error)) {
 				Cover: gen.Cover,
 			})
 
-			x.TUI.FileEnd(plugIndex, fileIndex, UpdateTreeReq{
+			x.TUI.FileEnd(UpdateTreeReq{
 				PkgName:  x.Option.Pkg.PkgPath,
 				PlugName: plugName,
 				FileName: gen.FileName,
@@ -328,7 +328,7 @@ func (x *X) UpdateTUI(plugName string, f func() (gens []GenResult, err error)) {
 
 	gw.Wait()
 
-	x.TUI.PlugEnd(plugIndex, UpdateTreeReq{
+	x.TUI.PlugEnd(UpdateTreeReq{
 		PkgName:  x.Option.Pkg.PkgPath,
 		PlugName: plugName,
 		Status:   1,
