@@ -15,9 +15,9 @@ func Gen(j *jen.File, option gen.Option, implGoTypeMetes []gen.InterfaceGoTypeMe
 		jen.Id("w").Qual("go.temporal.io/sdk/worker", "Worker"),
 	)
 
-	j.Line().Func().Id("NewTemporal").Params(jen.Id("i").Id("do.Injector")).Block(
+	/* j.Line().Func().Id("NewTemporal").Params(jen.Id("i").Id("do.Injector")).Block(
 		jen.Id("do").Dot("Provide").Call(jen.Id("i"), jen.Id("initTemporal")),
-	)
+	) */
 
 	parseImpl := common.NewInterfaceSerialize(option.Pkg)
 
@@ -30,7 +30,7 @@ func Gen(j *jen.File, option gen.Option, implGoTypeMetes []gen.InterfaceGoTypeMe
 		g.Id("t = &Temporal{next: next, w: w}").Line()
 
 		for _, v := range implGoTypeMetes {
-			meta, err := parseImpl.Parse(v.Obj,&v.Doc)
+			meta, err := parseImpl.Parse(v.Obj, &v.Doc)
 			if err != nil {
 				slog.Error("parseImpl.Parse", err, slog.String("name", v.Obj.String()))
 				return
@@ -47,7 +47,7 @@ func Gen(j *jen.File, option gen.Option, implGoTypeMetes []gen.InterfaceGoTypeMe
 	})
 
 	for _, v := range implGoTypeMetes {
-		meta, err := parseImpl.Parse(v.Obj,&v.Doc)
+		meta, err := parseImpl.Parse(v.Obj, &v.Doc)
 		if err != nil {
 			slog.Error("parseImpl.Parse", err, slog.String("name", v.Obj.String()))
 			return

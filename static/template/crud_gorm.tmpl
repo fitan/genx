@@ -4,7 +4,7 @@ type {{.InterfaceName}} interface {
 	Delete(ctx context.Context, {{.IdName}} {{.IdType}}) (err error)
 	DeleteList(ctx context.Context, ids []{{.IdType}}) (err error)
 	Get(ctx context.Context, {{.IdName}} {{.IdType}}, preload []string) (res {{.ModelName}}, err error)
-	List(ctx context.Context, page int64, pageSize int64, order string, scope func(db *gorm.DB) *gorm.DB, preload []string) (list []{{.ModelName}}, total int64, err error)
+	List(ctx context.Context, page int, pageSize int, order string, scope func(db *gorm.DB) *gorm.DB, preload []string) (list []{{.ModelName}}, total int, err error)
 	Save(ctx context.Context, {{.IdName}} {{.IdType}}, v *{{.ModelName}}) (err error)
 }
 
@@ -36,7 +36,7 @@ func (s *{{.StructName}}) Get(ctx context.Context, {{.IdName}} {{.IdType}}, prel
 	return res, db.Where("{{.IdName}} = ?", {{.IdName}}).First(&res, {{.IdName}}).Error
 }
 
-func (s *{{.StructName}}) List(ctx context.Context, page int64, pageSize int64, order string, scope func(db *gorm.DB) *gorm.DB, preload []string) (list []{{.ModelName}}, total int64, err error) {
+func (s *{{.StructName}}) List(ctx context.Context, page int, pageSize int, order string, scope func(db *gorm.DB) *gorm.DB, preload []string) (list []{{.ModelName}}, total int, err error) {
 	db := s.db.WithContext(ctx)
 
 	for _, pre := range preload {

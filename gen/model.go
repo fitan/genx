@@ -150,13 +150,16 @@ func (m *Model) PlugStart(req UpdateTreeReq) {
 		pkgIndex = len(m.tree.Children) - 1
 	}
 
-	m.tree.Children[pkgIndex].Children = append(m.tree.Children[pkgIndex].Children, TreeNode{
-		Text:      req.PlugName,
-		Children:  []TreeNode{},
-		Status:    0,
-		Err:       req.Err,
-		StartTime: time.Now(),
-	})
+	_, plugOk := m.hasNode(m.tree.Children[pkgIndex].Children, req.PlugName)
+	if !plugOk {
+		m.tree.Children[pkgIndex].Children = append(m.tree.Children[pkgIndex].Children, TreeNode{
+			Text:      req.PlugName,
+			Children:  []TreeNode{},
+			Status:    0,
+			Err:       req.Err,
+			StartTime: time.Now(),
+		})
+	}
 
 }
 

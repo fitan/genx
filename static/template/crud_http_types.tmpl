@@ -18,8 +18,8 @@ type GetRequest struct {
 }
 
 type ListRequest struct {
-	Page      int64    `json:"page" param:"query,page"`
-	PageSize  int64    `json:"pageSize" param:"query,pageSize"`
+	Page      int    `json:"page" param:"query,page"`
+	PageSize  int    `json:"pageSize" param:"query,pageSize"`
 	Order     string `json:"order" param:"query,order"`
 	ListQuery ListQuery `json:"query" param:",listQuery"`
 }

@@ -13,6 +13,7 @@ import (
 	"github.com/fitan/genx/gen"
 	plugCopy "github.com/fitan/genx/plugs/copy"
 	"github.com/fitan/genx/plugs/crud"
+	"github.com/fitan/genx/plugs/do"
 	"github.com/fitan/genx/plugs/enum"
 	"github.com/fitan/genx/plugs/gormq"
 	"github.com/fitan/genx/plugs/kithttp"
@@ -59,6 +60,12 @@ func main() {
 					item.RegImpl(&kithttp.ObserverPlug{})
 					item.Gen()
 				})
+			})
+
+			wg.Go(func() {
+				globalX := gen.NewGlobalX(x, model)
+				globalX.RegFunc(do.New())
+				globalX.Gen()
 			})
 
 			g := run.Group{}

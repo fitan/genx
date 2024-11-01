@@ -72,7 +72,6 @@ func (x *X) RegFunc(plug FuncPlugImpl) {
 }
 
 func (x *X) Gen() {
-	x.parse()
 	x.typeGen()
 	x.implGen()
 	x.structGen()
@@ -87,7 +86,7 @@ func (x *X) Gen() {
 	return
 }
 
-func (x *X) parse() {
+func (x *X) Parse() {
 	for _, v := range x.Option.Pkg.Syntax {
 		astutil.Apply(v, func(c *astutil.Cursor) bool {
 			switch t := c.Node().(type) {
@@ -136,12 +135,16 @@ func (x *X) parse() {
 					var fn FuncGoTypeMeta
 					fn.Name = t.Name.Name
 					fn.Doc = doc
-					for _, param := range t.Type.Params.List {
-						fn.Params = append(fn.Params, common.TypeOf(x.Option.Pkg.TypesInfo.TypeOf(param.Type)))
+					if t.Type.Params != nil {
+						for _, param := range t.Type.Params.List {
+							fn.Params = append(fn.Params, common.TypeOf(x.Option.Pkg.TypesInfo.TypeOf(param.Type)))
+						}
 					}
 
-					for _, param := range t.Type.Results.List {
-						fn.Results = append(fn.Results, common.TypeOf(x.Option.Pkg.TypesInfo.TypeOf(param.Type)))
+					if t.Type.Results != nil {
+						for _, param := range t.Type.Results.List {
+							fn.Results = append(fn.Results, common.TypeOf(x.Option.Pkg.TypesInfo.TypeOf(param.Type)))
+						}
 					}
 
 					slog.Info("parse func", slog.String("name", line.UpFuncName()))
@@ -208,9 +211,14 @@ func (x *X) parse() {
 	}
 }
 
+func (x *X) implByName(name string) ([]InterfaceGoTypeMeta, bool) {
+	meta, ok := x.Metas.Impl.NameGoTypeMap[strings.ToUpper(name)]
+	return meta, ok
+}
+
 func (x *X) implGen() {
 	for _, v := range x.Plugs.Impl {
-		metas, ok := x.Metas.Impl.NameGoTypeMap[strings.ToUpper(v.Name())]
+		metas, ok := x.implByName(v.Name())
 		if ok {
 			modelName := v.Name()
 			x.WG.Go(func() {
@@ -218,11 +226,16 @@ func (x *X) implGen() {
 			})
 		}
 	}
+}
+
+func (x *X) callByName(name string) ([]CallGoTypeMeta, bool) {
+	meta, ok := x.Metas.Call.NameGoTypeMap[strings.ToUpper(name)]
+	return meta, ok
 }
 
 func (x *X) callGen() {
 	for _, v := range x.Plugs.Call {
-		metas, ok := x.Metas.Call.NameGoTypeMap[strings.ToUpper(v.Name())]
+		metas, ok := x.callByName(v.Name())
 		if ok {
 			modelName := v.Name()
 			x.WG.Go(func() {
@@ -230,11 +243,16 @@ func (x *X) callGen() {
 			})
 		}
 	}
+}
+
+func (x *X) typeByName(name string) ([]TypeGoTypeMeta, bool) {
+	meta, ok := x.Metas.Type.NameGoTypeMap[name]
+	return meta, ok
 }
 
 func (x *X) typeGen() {
 	for _, v := range x.Plugs.Type {
-		metas, ok := x.Metas.Type.NameGoTypeMap[strings.ToUpper(v.Name())]
+		metas, ok := x.typeByName(v.Name())
 		if ok {
 			modelName := v.Name()
 			x.WG.Go(func() {
@@ -242,11 +260,16 @@ func (x *X) typeGen() {
 			})
 		}
 	}
+}
+
+func (x *X) structByName(name string) ([]StructGoTypeMeta, bool) {
+	meta, ok := x.Metas.Struct.NameGoTypeMap[name]
+	return meta, ok
 }
 
 func (x *X) structGen() {
 	for _, v := range x.Plugs.Struct {
-		metas, ok := x.Metas.Struct.NameGoTypeMap[strings.ToUpper(v.Name())]
+		metas, ok := x.structByName(v.Name())
 		if ok {
 			modelName := v.Name()
 			x.WG.Go(func() {
@@ -254,11 +277,16 @@ func (x *X) structGen() {
 			})
 		}
 	}
+}
+
+func (x *X) funcByName(name string) ([]FuncGoTypeMeta, bool) {
+	meta, ok := x.Metas.Func.NameGoTypeMap[strings.ToUpper(name)]
+	return meta, ok
 }
 
 func (x *X) funcGen() {
 	for _, v := range x.Plugs.Func {
-		metas, ok := x.Metas.Func.NameGoTypeMap[strings.ToUpper(v.Name())]
+		metas, ok := x.funcByName(v.Name())
 		if ok {
 			modelName := v.Name()
 			x.WG.Go(func() {
@@ -268,9 +296,14 @@ func (x *X) funcGen() {
 	}
 }
 
+func (x *X) typeSpecByName(name string) ([]TypeSpecGoTypeMeta, bool) {
+	meta, ok := x.Metas.TypeSpec.NameGoTypeMap[strings.ToUpper(name)]
+	return meta, ok
+}
+
 func (x *X) typeSpecGen() {
 	for _, v := range x.Plugs.TypeSpec {
-		metas, ok := x.Metas.TypeSpec.NameGoTypeMap[strings.ToUpper(v.Name())]
+		metas, ok := x.typeSpecByName(v.Name())
 		if ok {
 			modelName := v.Name()
 			x.WG.Go(func() {
@@ -338,7 +371,7 @@ func (x *X) UpdateTUI(plugName string, f func() (gens []GenResult, err error)) {
 }
 
 func NewXByPkg(static embed.FS, p *packages.Package, tui *Model, config *Config) (*X, error) {
-	return &X{
+	x := &X{
 		WG: conc.NewWaitGroup(),
 		Option: Option{
 			Static:          static,
@@ -377,7 +410,10 @@ func NewXByPkg(static embed.FS, p *packages.Package, tui *Model, config *Config)
 			Call:     make([]CallPlugImpl, 0),
 		},
 		TUI: tui,
-	}, nil
+	}
+
+	x.Parse()
+	return x, nil
 }
 
 func NewX(static embed.FS, dir string, tui *Model) (res []*X, err error) {
