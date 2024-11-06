@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/fitan/genx/common"
 	"github.com/fitan/genx/gen"
 	"github.com/fitan/jennifer/jen"
 )
@@ -113,6 +112,5 @@ func (p *Plug) Gen(option gen.Option, implGoTypeMetes []gen.StructGoTypeMeta) (r
 		FileStr:  j.GoString(),
 		Cover:    true,
 	})
-	common.WriteGO(filepath.Join(option.Dir, "gorm_scope.go"), j.GoString())
 	return
 }

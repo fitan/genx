@@ -448,7 +448,9 @@ func (q *FieldQuery) Parse(op gen.Option) {
 			})
 			q.InStruct.Parser.Parse([]string{}, false)
 		} else {
-			q.Op = "in"
+			if q.Op == "=" || q.Op == "" {
+				q.Op = "IN"
+			}
 		}
 	}
 }

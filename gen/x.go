@@ -246,7 +246,7 @@ func (x *X) callGen() {
 }
 
 func (x *X) typeByName(name string) ([]TypeGoTypeMeta, bool) {
-	meta, ok := x.Metas.Type.NameGoTypeMap[name]
+	meta, ok := x.Metas.Type.NameGoTypeMap[strings.ToUpper(name)]
 	return meta, ok
 }
 
@@ -263,7 +263,7 @@ func (x *X) typeGen() {
 }
 
 func (x *X) structByName(name string) ([]StructGoTypeMeta, bool) {
-	meta, ok := x.Metas.Struct.NameGoTypeMap[name]
+	meta, ok := x.Metas.Struct.NameGoTypeMap[strings.ToUpper(name)]
 	return meta, ok
 }
 
