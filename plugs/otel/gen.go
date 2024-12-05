@@ -24,7 +24,7 @@ func Gen(pkg *packages.Package, methods []common.InterfaceMethod) string {
 	funcList := make([]jen.Code, 0)
 
 	for _, method := range methods {
-		funcList = append(funcList, genOtelFunc(pkg.PkgPath, method))
+		funcList = append(funcList, genOtelFunc(method))
 	}
 
 	j.Add(funcList...)
@@ -33,7 +33,7 @@ func Gen(pkg *packages.Package, methods []common.InterfaceMethod) string {
 	return j.GoString()
 }
 
-func genOtelFunc(tracingPrefix string, method common.InterfaceMethod) jen.Code {
+func genOtelFunc(method common.InterfaceMethod) jen.Code {
 	methodParamCode := make([]jen.Code, 0)
 	methodParamCode = append(methodParamCode, jen.Id("ctx").Qual("context", "Context"))
 	methodResultCode := make([]jen.Code, 0)

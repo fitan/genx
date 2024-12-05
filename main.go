@@ -77,7 +77,7 @@ func main() {
 					panic(err)
 				}
 			})
-			g.Add(func() error {
+			/* 		g.Add(func() error {
 				p := tea.NewProgram(model)
 
 				if _, err := p.Run(); err != nil {
@@ -89,11 +89,18 @@ func main() {
 				if err != nil {
 					panic(err)
 				}
-			})
+			}) */
 
 			g.Add(func() error {
+				go func() {
+					p := tea.NewProgram(model)
+					if _, err := p.Run(); err != nil {
+						panic(err)
+					}
+				}()
+
 				wg.Wait()
-				time.Sleep(time.Second * 3)
+				time.Sleep(1 * time.Second)
 				model.Down()
 				cancel(nil)
 				// fmt.Println("gen finish !!!")

@@ -49,6 +49,7 @@ func ObserverGen(opt gen.Option, imd common.InterfaceMetaDate) (res []gen.GenRes
 		Name:    "Service",
 		Methods: methodMap,
 		Doc:     *imd.Doc,
+		RawDoc:  *imd.RawDoc,
 		Opt:     opt,
 	}
 
@@ -67,15 +68,15 @@ func ObserverGen(opt gen.Option, imd common.InterfaceMetaDate) (res []gen.GenRes
 	tJen := jen.NewFile(opt.Pkg.Name)
 
 	importMap := map[string]string{
-		"encoding/json":                             "json",
-		"net/http":                                  "http",
-		"strings":                                   "strings",
+		"encoding/json":                             "",
+		"net/http":                                  "",
+		"strings":                                   "",
 		"github.com/asaskevich/govalidator":         "valid",
-		"github.com/go-kit/kit/endpoint":            "endpoint",
-		"github.com/go-kit/kit/transport/http":      "kithttp",
-		"github.com/gorilla/mux":                    "mux",
-		"github.com/pkg/errors":                     "errors",
-		"github.com/spf13/cast":                     "cast",
+		"github.com/go-kit/kit/endpoint":            "",
+		"github.com/go-kit/kit/transport/http":      "",
+		"github.com/gorilla/mux":                    "",
+		"github.com/pkg/errors":                     "",
+		"github.com/spf13/cast":                     "",
 		"github.com/go-playground/validator/v10":    "validator",
 		"context":                                   "",
 		"github.com/opentracing/opentracing-go/ext": "",
@@ -150,6 +151,7 @@ func Gen(opt gen.Option, imd common.InterfaceMetaDate) (res []gen.GenResult, err
 		Name:    "Service",
 		Methods: methodMap,
 		Doc:     *imd.Doc,
+		RawDoc:  *imd.RawDoc,
 		Opt:     opt,
 	}
 
@@ -167,13 +169,13 @@ func Gen(opt gen.Option, imd common.InterfaceMetaDate) (res []gen.GenResult, err
 	hJen := jen.NewFile(opt.Pkg.Name)
 
 	importMap := map[string]string{
-		"encoding/json":                             "json",
-		"net/http":                                  "http",
-		"strings":                                   "strings",
+		"encoding/json":                             "",
+		"net/http":                                  "",
+		"strings":                                   "",
 		"github.com/asaskevich/govalidator":         "valid",
-		"github.com/go-kit/kit/endpoint":            "endpoint",
+		"github.com/go-kit/kit/endpoint":            "",
 		"github.com/go-kit/kit/transport/http":      "kithttp",
-		"github.com/gorilla/mux":                    "mux",
+		"github.com/gorilla/mux":                    "",
 		"github.com/pkg/errors":                     "errors",
 		"github.com/spf13/cast":                     "cast",
 		"github.com/go-playground/validator/v10":    "validator",

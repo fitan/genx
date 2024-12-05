@@ -71,6 +71,7 @@ type ImplMeta struct {
 type InterfaceGoTypeMeta struct {
 	Name   string
 	Doc    common.Doc
+	RawDoc *ast.CommentGroup
 	Params []string
 	Obj    *types.Interface
 }

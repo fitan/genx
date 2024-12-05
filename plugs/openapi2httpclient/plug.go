@@ -1,9 +1,9 @@
 package openapi2httpclient
 
 import (
-	"fmt"
 	"io/ioutil"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/pb33f/libopenapi"
 	"github.com/pb33f/libopenapi/renderer"
 )
@@ -12,7 +12,7 @@ func Load() {
 	// create a new JSON mock generator
 
 	// create a new JSON mock generator
-	mg := renderer.NewMockGenerator(renderer.JSON)
+	mg := renderer.NewMockGenerator(renderer.)
 
 	// tell the mock generator to pretty print the output
 	mg.SetPretty()
@@ -29,19 +29,12 @@ func Load() {
 		panic(errs)
 	}
 
-	// create a mock of the Fries model
-	friesModel, ok := v3Model.Model.Components.Schemas.Get("src_pkg_collect.TaskListResponse")
-	if !ok {
-		panic("Fries model not found")
-	}
+	paths := v3Model.Model.Paths
+	schemas := v3Model.Model.Components.Schemas
 
-	// generate a mock of the fries schema
-	mock, err := mg.GenerateMock(friesModel, "")
+	item, _ := paths.PathItems.OrderedMap.Get("/v1/assets/list")
+	
+	
+	mg.GenerateMock()
 
-	if err != nil {
-		panic(err)
-	}
-
-	// print the mock to stdout
-	fmt.Println(string(mock))
 }

@@ -18,10 +18,11 @@ func NewInterfaceSerialize(pkg *packages.Package) *InterfaceSerialize {
 	return &InterfaceSerialize{pkg: pkg}
 }
 
-func (i *InterfaceSerialize) Parse(it *types.Interface, doc *Doc) (InterfaceMetaDate, error) {
+func (i *InterfaceSerialize) Parse(it *types.Interface, rawDoc *ast.CommentGroup, doc *Doc) (InterfaceMetaDate, error) {
 	impl := InterfaceMetaDate{
 		Methods: make([]InterfaceMethod, 0),
 		Doc:     doc,
+		RawDoc:  rawDoc,
 	}
 
 	for n := 0; n < it.NumMethods(); n++ {
@@ -100,6 +101,7 @@ func (i *InterfaceSerialize) Parse(it *types.Interface, doc *Doc) (InterfaceMeta
 type InterfaceMetaDate struct {
 	Imports []*ast.ImportSpec
 	Doc     *Doc
+	RawDoc  *ast.CommentGroup
 	Methods []InterfaceMethod
 }
 

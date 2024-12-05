@@ -308,6 +308,7 @@ func (k *KitRequest) DecodeRequest() (s string) {
 		listCode = append(listCode, k.BindFormParam()...)
 		listCode = append(listCode, k.BindCtxParam()...)
 		listCode = append(listCode, k.BindRequest()...)
+		listCode = append(listCode, k.Validate()...)
 		listCode = append(listCode, jen.Return(jen.Id("req"), jen.Id("err")))
 	} else {
 		listCode = append(listCode, jen.Return(jen.Id("nil"), jen.Id("nil")))
@@ -1130,12 +1131,12 @@ func CastMap(p *common.Type, paramName, t, paramTypeName string, code jen.Code) 
 
 	ifParamStr := jen.If(jen.Id(paramStr).Op("!=").Lit("")).BlockFunc(func(group *jen.Group) {
 		if hasType {
-			group.List(jen.Id(paramName+"Asser"), jen.Id(paramName+"Err")).Op(":=").Id(fnStr).Call(paramStrCode).Line()
+			group.List(jen.Id(paramName+"Assert"), jen.Id(paramName+"Err")).Op(":=").Id(fnStr).Call(paramStrCode).Line()
 			group.If(jen.Id(paramName+"Err").Op("!=").Nil()).Block(
 				jen.Err().Op("=").Id(paramName+"Err"),
 				jen.Return(),
 			)
-			group.Id(paramName).Op("=").Id(paramTypeName).Call(jen.Id(paramName + "Asser"))
+			group.Id(paramName).Op("=").Id(paramTypeName).Call(jen.Id(paramName + "Assert"))
 		} else {
 			group.List(jen.Id(paramName), jen.Err()).Op("=").Id(fnStr).Call(paramStrCode).Line()
 			group.If(jen.Err().Op("!=").Nil()).Block(

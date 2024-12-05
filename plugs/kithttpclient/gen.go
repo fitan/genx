@@ -169,7 +169,7 @@ func (k *KitHttpClient) Parse() {
 	parseImpl := common.NewInterfaceSerialize(k.option.Pkg)
 
 	for _, v := range k.implGoTypeMetes {
-		interfaceMetaDate, err := parseImpl.Parse(v.Obj, &v.Doc)
+		interfaceMetaDate, err := parseImpl.Parse(v.Obj, v.RawDoc, &v.Doc)
 		if err != nil {
 			panic(err)
 		}

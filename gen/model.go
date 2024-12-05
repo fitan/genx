@@ -174,6 +174,11 @@ func (m *Model) PlugEnd(req UpdateTreeReq) {
 	m.tree.Children[pkgIndex].Children[plugIndex].Status = req.Status
 	m.tree.Children[pkgIndex].Children[plugIndex].Err = req.Err
 	m.tree.Children[pkgIndex].Children[plugIndex].EndTime = lo.ToPtr(time.Now())
+
+	if req.Err != "" {
+		m.teaCmds = append(m.teaCmds, tea.Printf("%s %s %s", errStyle.Render("✗"), req.PlugName, time.Since(m.tree.Children[pkgIndex].Children[plugIndex].StartTime).String()))
+		m.teaCmds = append(m.teaCmds, tea.Printf("%s", req.Err))
+	}
 }
 
 func (m *Model) FileStart(req UpdateTreeReq) {
@@ -217,6 +222,7 @@ func (m *Model) FileEnd(req UpdateTreeReq) {
 			errStyle.Render("✗"),
 			req.FileName,
 			time.Since(fileNode.StartTime).String()))
+		m.teaCmds = append(m.teaCmds, tea.Printf("%s", req.Err))
 	default:
 		m.teaCmds = append(m.teaCmds, tea.Printf("%s %s %s",
 			unknownStyle.Render("unknown"),
@@ -260,7 +266,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		defer func() {
 			m.endDown <- struct{}{}
 		}()
-		return m, tea.Quit
+		return m, tea.Sequence(tea.Printf("quit!"), tea.Quit)
 	default:
 		return m, nil
 	}

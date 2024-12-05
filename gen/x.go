@@ -185,9 +185,10 @@ func (x *X) Parse() {
 							for _, line := range doc {
 								slog.Info("parse impl", slog.String("name", line.UpFuncName()))
 								x.Metas.Impl.NameGoTypeMap[line.UpFuncName()] = append(x.Metas.Impl.NameGoTypeMap[line.UpFuncName()], InterfaceGoTypeMeta{
-									Name: st.Name.Name,
-									Doc:  doc,
-									Obj:  x.Option.Pkg.TypesInfo.TypeOf(st.Type).(*types.Interface),
+									Name:   st.Name.Name,
+									Doc:    doc,
+									RawDoc: t.Doc,
+									Obj:    x.Option.Pkg.TypesInfo.TypeOf(st.Type).(*types.Interface),
 								})
 							}
 						case *ast.StructType:
@@ -344,7 +345,7 @@ func (x *X) UpdateTUI(plugName string, f func() (gens []GenResult, err error)) {
 				Err:      "",
 			})
 
-			cover := common.WriteGoWithOpt(gen.FileName, gen.FileStr, common.WriteOpt{
+			cover, err := common.WriteGoWithOpt(gen.FileName, gen.FileStr, common.WriteOpt{
 				Cover: gen.Cover,
 			})
 
@@ -353,7 +354,11 @@ func (x *X) UpdateTUI(plugName string, f func() (gens []GenResult, err error)) {
 				PlugName: plugName,
 				FileName: gen.FileName,
 				Status:   lo.Ternary(cover, 1, 3),
-				Err:      "",
+				Err: lo.TernaryF(err != nil, func() string {
+					return err.Error()
+				}, func() string {
+					return ""
+				}),
 			})
 
 		})

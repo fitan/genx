@@ -247,7 +247,7 @@ func (g *GlobalX) UpdateTUI(plugName string, f func() (gens []GenResult, err err
 				Err:      "",
 			})
 
-			cover := common.WriteGoWithOpt(gen.FileName, gen.FileStr, common.WriteOpt{
+			cover, err := common.WriteGoWithOpt(gen.FileName, gen.FileStr, common.WriteOpt{
 				Cover: gen.Cover,
 			})
 
@@ -256,7 +256,11 @@ func (g *GlobalX) UpdateTUI(plugName string, f func() (gens []GenResult, err err
 				PlugName: plugName,
 				FileName: gen.FileName,
 				Status:   lo.Ternary(cover, 1, 3),
-				Err:      "",
+				Err: lo.TernaryF(err != nil, func() string {
+					return err.Error()
+				}, func() string {
+					return ""
+				}),
 			})
 
 		})
