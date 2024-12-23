@@ -11,6 +11,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/fitan/genx/gen"
+	"github.com/fitan/genx/plugs/alert"
 	plugCopy "github.com/fitan/genx/plugs/copy"
 	"github.com/fitan/genx/plugs/crud"
 	"github.com/fitan/genx/plugs/do"
@@ -58,6 +59,7 @@ func main() {
 					item.RegCall(&plugCopy.Plug{})
 					item.RegImpl(&kithttp.Plug{})
 					item.RegImpl(&kithttp.ObserverPlug{})
+					item.RegImpl(&alert.Plug{})
 					item.Gen()
 				})
 			})
