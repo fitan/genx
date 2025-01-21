@@ -124,6 +124,10 @@ func Gen(opt gen.Option, imd common.InterfaceMetaDate) (res []gen.GenResult, err
 		if err != nil {
 			panic(err)
 		}
+		// 如果没有不生成
+		if kit.Conf.Url == "" {
+			return nil, nil
+		}
 		kitRequest := NewKitRequest(opt.Pkg, m.Name, kit.Conf.HttpRequestName, kit.Conf.HttpRequestBody)
 		kitRequest.ParseRequest()
 
@@ -144,7 +148,9 @@ func Gen(opt gen.Option, imd common.InterfaceMetaDate) (res []gen.GenResult, err
 			panic(err)
 		}
 
-		methodMap[v.Name] = *m
+		if m != nil {
+			methodMap[v.Name] = *m
+		}
 	}
 
 	tInput := &TemplateInputInterface{

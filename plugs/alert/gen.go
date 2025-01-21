@@ -12,9 +12,7 @@ func Gen(pkg *packages.Package, methods []common.InterfaceMethod) string {
 	slog.Info("gen alert", slog.Any("pkg", pkg), slog.Any("methods", methods))
 	j := jen.NewFile(pkg.Name)
 	common.JenAddImports(pkg, j)
-	j.AddImport("github.com/opentracing/basictracer-go", "")
 	j.AddImport("github.com/spf13/cast", "")
-	j.AddImport("github.com/opentracing/opentracing-go", "")
 	j.Add(genAlertStructAndNew())
 	j.Add()
 
@@ -61,39 +59,31 @@ func genAlertFunc(pkgName string, method common.InterfaceMethod) jen.Code {
 			fg.Defer().Func().Params().BlockFunc(func(g *jen.Group) {
 				g.Id("if err == nil {return}")
 
-				g.Var().Id("_traceId").Uint64()
+				g.Id(`_traceId,_ := ctx.Value("traceId").(string)`)
 				g.Id("_title").Op(":=").Lit(pkgName + "." + method.Name)
-				g.Id("_level").Op(":=").Id("alarm.LevelInfo")
 
-				g.Id(`
-				span := opentracing.SpanFromContext(ctx)
-				if span != nil {
-			if sc, ok := span.Context().(basictracer.SpanContext); ok {
-				_traceId = sc.TraceID
-			}
-		}`)
 				var level string
 				var metrics string
 				method.Doc.ByFuncNameAndArgs("@alert-level", &level)
 				method.Doc.ByFuncNameAndArgs("@alert-metrics", &metrics)
 
 				if level == "" {
-					g.Id("_level").Op("=").Id("s.level")
+					g.Id("_level").Op(":=").Id("s.level")
 				} else {
 					switch level {
 					case "info":
-						g.Id("_level").Op("=").Id("alarm.LevelInfo")
+						g.Id("_level").Op(":=").Id("alarm.LevelInfo")
 					case "warn":
-						g.Id("_level").Op("=").Id("alarm.LevelWarning")
+						g.Id("_level").Op(":=").Id("alarm.LevelWarning")
 					case "error":
-						g.Id("_level").Op("=").Id("alarm.LevelError")
+						g.Id("_level").Op(":=").Id("alarm.LevelError")
 					}
 				}
 
 				g.Id("_err").Op(":=").Id("s").Dot("api").Dot("Alarm").Call().Dot("Push").Call(
 					jen.Id("ctx"),
 					jen.Id("_title"),
-					jen.Id("cast.ToString(_traceId)").Op("+").Id("err").Dot("Error").Call(),
+					jen.Id("_traceId").Op("+").Id("err").Dot("Error").Call(),
 					jen.Id("strings.Join").Call(jen.Id("[]string").ValuesFunc(func(g *jen.Group) {
 						g.Lit(pkgName + "." + method.Name)
 						if lo.IsNotEmpty(metrics) {

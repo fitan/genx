@@ -25,8 +25,15 @@ func (s Plug) http(option gen.Option, structGoTypeMetas []gen.StructGoTypeMeta) 
 		crudHttpTypeJ.AddImport(v.Path, v.Alias)
 	}
 
-	crudHttpJ.AddImport("github.com/pkg/errors", "")
-	crudHttpJ.AddImport("github.com/samber/lo", "")
+	is := map[string]string{
+		"github.com/pkg/errors": "",
+		"gorm.io/gorm":          "",
+		"github.com/samber/lo":  "",
+	}
+	for k, v := range is {
+		crudHttpJ.AddImport(k, v)
+		crudHttpTypeJ.AddImport(k, v)
+	}
 
 	crud := &HttpCrud{
 		CrudHttpServiceJ:     crudHttpJ,
@@ -41,7 +48,7 @@ func (s Plug) http(option gen.Option, structGoTypeMetas []gen.StructGoTypeMeta) 
 	}
 
 	res = append(res, gen.GenResult{
-		FileName: filepath.Join(option.Dir, "crud_http_types.go"),
+		FileName: filepath.Join(option.Dir, "types.go"),
 		FileStr:  crudHttpTypeJ.GoString(),
 		Cover:    false,
 	})
@@ -62,7 +69,9 @@ func (s Plug) gorm(option gen.Option, structGoTypeMetas []gen.StructGoTypeMeta) 
 	crudGormScopeJ := jen.NewFile(option.Pkg.Name)
 
 	crudGormJ.AddImport("gorm.io/gorm", "")
+	crudGormJ.AddImport("github.com/pkg/errors", "")
 	crudGormScopeJ.AddImport("gorm.io/gorm", "")
+	crudGormScopeJ.AddImport("github.com/pkg/errors", "")
 
 	for _, v := range option.Config.Imports {
 		crudGormJ.AddImport(v.Path, v.Alias)
@@ -80,14 +89,14 @@ func (s Plug) gorm(option gen.Option, structGoTypeMetas []gen.StructGoTypeMeta) 
 		return
 	}
 
-	res = append(res, gen.GenResult{
+	/* 	res = append(res, gen.GenResult{
 		FileName: filepath.Join(option.Dir, "crud_gorm_types.go"),
 		FileStr:  crudGormTypeJ.GoString(),
 		Cover:    false,
-	})
+	}) */
 
 	res = append(res, gen.GenResult{
-		FileName: filepath.Join(option.Dir, "crud_gorm_service.go"),
+		FileName: filepath.Join(option.Dir, "crud_base_service.go"),
 		FileStr:  crudGormJ.GoString(),
 		Cover:    false,
 	})

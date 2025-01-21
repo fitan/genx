@@ -1,26 +1,27 @@
-type CreateRequest struct {
-}
+{{.CreateRequestStruct}}
+
 
 type CreateListRequest struct {
 	Body []CreateRequest `json:"body" param:"body,body"`
 }
 
 type DeleteRequest struct {
-	{{.IdName}} {{.IdType}} `json:"{{.IdName}}" param:"path,{{lowerCamel .IdName}}"`
+	{{camel .IdName}} {{.IdType}} `json:"{{.IdName}}" param:"path,{{lowerCamel .IdName}}"`
 }
 
 type DeleteListRequest struct {
-	{{plural (camel .IdName)}} []{{.IdType}} `query:"{{plural (lowerCamel .IdName)}}" param:"query,{{plural (lowerCamel .IdName)}}"`
+	{{plural (camel .IdName)}} []{{.IdType}} `query:"{{plural (lowerCamel .IdName)}}" param:"query,{{plural .IdName}}"`
 }
 
 type GetRequest struct {
-	{{.IdName}} {{.IdType}} `json:"{{.IdName}}" param:"path,{{lowerCamel .IdName}}"`
+	{{camel .IdName}} {{.IdType}} `json:"{{.IdName}}" param:"path,{{lowerCamel .IdName}}"`
 }
 
 type ListRequest struct {
 	Page      int    `json:"page" param:"query,page"`
 	PageSize  int    `json:"pageSize" param:"query,pageSize"`
-	Order     string `json:"order" param:"query,order"`
+	Orders    []string `json:"orders" param:"query,orders"`
+	{{plural (camel .IdName)}} []{{.IdType}} `json:"{{plural .IdName}}" param:"query,{{plural .IdName}}"`
 	ListQuery ListQuery `json:"query" param:",listQuery"`
 }
 
@@ -29,15 +30,22 @@ type ListQuery struct {
 }
 
 type UpdateRequest struct {
-	{{.IdName}} {{.IdType}} `json:"{{lowerCamel .IdName}}" param:"path,{{lowerCamel .IdName}}"`
+	{{camel .IdName}} {{.IdType}} `json:"{{lowerCamel .IdName}}" param:"path,{{lowerCamel .IdName}}"`
     Body UpdateBody `json:"body" param:"body,body"`
 }
 
-type UpdateBody struct {
+type UpdateListRequest struct {
+	Body []UpdateListItem `json:"body" param:"body,body"`
 }
 
-type GetResponse struct {
+type UpdateListItem struct {
+	{{camel .IdName}} {{.IdType}} `json:"{{lowerCamel .IdName}}"`
+	UpdateBody
 }
+
+{{.UpdateBodyStruct}}
+
+{{.GetResponseStruct}}
 
 type ListResponse []GetResponse
 
@@ -54,4 +62,7 @@ type DeleteListResponse struct {
 }
 
 type UpdateResponse struct {
+}
+
+type UpdateListResponse struct {
 }

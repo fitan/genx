@@ -5,8 +5,10 @@ package main
 
 import (
 	"embed"
+	"fmt"
 	"log/slog"
 	"os"
+	"os/signal"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -35,19 +37,24 @@ var staticFiles embed.FS
 func main() {
 	app := &cli.App{
 		Action: func(ctx *cli.Context) error {
-
 			model := gen.NewModel()
+
+			go func() {
+				p := tea.NewProgram(model)
+				if _, err := p.Run(); err != nil {
+					panic(err)
+				}
+			}()
 
 			x, err := gen.NewX(staticFiles, "./...", model)
 			if err != nil {
-				slog.Error("new x error", "err", err)
 				os.Exit(1)
 			}
 
-			var wg conc.WaitGroup
+			var moduleWG conc.WaitGroup
 
 			lo.ForEach(x, func(item *gen.X, index int) {
-				wg.Go(func() {
+				moduleWG.Go(func() {
 					item.RegImpl(&log.Plug{})
 					item.RegImpl(&trace.Plug{})
 					item.RegImpl(&otel.Plug{})
@@ -64,6 +71,16 @@ func main() {
 				})
 			})
 
+			moduleWG.Wait()
+
+			x, err = gen.NewX(staticFiles, "./...", model)
+			if err != nil {
+				slog.Error("new global x error", "err", err)
+				os.Exit(1)
+			}
+
+			var wg conc.WaitGroup
+
 			wg.Go(func() {
 				globalX := gen.NewGlobalX(x, model)
 				globalX.RegFunc(do.New())
@@ -72,39 +89,11 @@ func main() {
 
 			g := run.Group{}
 
-			signal, cancel := run.SignalHandler(ctx.Context, os.Interrupt)
-
-			g.Add(signal, func(err error) {
-				if err != nil {
-					panic(err)
-				}
-			})
-			/* 		g.Add(func() error {
-				p := tea.NewProgram(model)
-
-				if _, err := p.Run(); err != nil {
-					return err
-				}
-
-				return nil
-			}, func(err error) {
-				if err != nil {
-					panic(err)
-				}
-			}) */
-
 			g.Add(func() error {
-				go func() {
-					p := tea.NewProgram(model)
-					if _, err := p.Run(); err != nil {
-						panic(err)
-					}
-				}()
 
 				wg.Wait()
 				time.Sleep(1 * time.Second)
 				model.Down()
-				cancel(nil)
 				// fmt.Println("gen finish !!!")
 				return nil
 			}, func(err error) {
@@ -122,6 +111,17 @@ func main() {
 			return nil
 		},
 	}
+
+	sigChan := make(chan os.Signal, 1)
+
+	signal.Notify(sigChan, os.Interrupt)
+
+	go func() {
+
+		<-sigChan
+		fmt.Println("signal received")
+		os.Exit(0)
+	}()
 
 	if err := app.Run(os.Args); err != nil {
 		panic(err)

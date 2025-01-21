@@ -16,7 +16,7 @@ const mode packages.LoadMode = packages.NeedName |
 	packages.NeedImports |
 	//packages.NeedModule |
 	//packages.NeedTypesSizes |
-	//packages.NeedDeps |
+	packages.NeedDeps |
 	packages.NeedFiles
 
 func LoadPkg(path string) ([]*packages.Package, error) {

@@ -1,11 +1,12 @@
 type {{.InterfaceName}} interface {
 	Create(ctx context.Context, v *{{.ModelName}}) (err error)
 	CreateList(ctx context.Context, vs []*{{.ModelName}}) (err error)
-	Delete(ctx context.Context, {{.IdName}} {{.IdType}}) (err error)
-	DeleteList(ctx context.Context, ids []{{.IdType}}) (err error)
+	Delete(ctx context.Context, {{.IdName}} {{.IdType}},clear []string, delete []string) (err error)
+	DeleteList(ctx context.Context, {{.IdName}}s []{{.IdType}}, clear []string, delete []string) (err error)
 	Get(ctx context.Context, {{.IdName}} {{.IdType}}, preload []string) (res {{.ModelName}}, err error)
-	List(ctx context.Context, page int, pageSize int, order string, scope func(db *gorm.DB) *gorm.DB, preload []string) (list []{{.ModelName}}, total int, err error)
-	Save(ctx context.Context, {{.IdName}} {{.IdType}}, v *{{.ModelName}}) (err error)
+	List(ctx context.Context, {{.IdName}}s []{{.IdType}},page int, pageSize int, orders []string, scope func(db *gorm.DB) *gorm.DB, preload []string) (list []{{.ModelName}}, total int64, err error)
+	Update(ctx context.Context, v {{.ModelName}}, clear []string) (err error)
+	UpdateList(ctx context.Context, vs []{{.ModelName}}, clear []string) (err error)
 }
 
 
@@ -18,25 +19,57 @@ func (s *{{.StructName}}) CreateList(ctx context.Context, vs []*{{.ModelName}}) 
 	return s.db.WithContext(ctx).CreateInBatches(vs, 5000).Error
 }
 
-func (s *{{.StructName}}) Delete(ctx context.Context, {{.IdName}} {{.IdType}}) (err error) {
-	return s.db.WithContext(ctx).Where("{{.IdName}} = ?", {{.IdName}}).Delete(&{{.ModelName}}{}).Error
+func (s *{{.StructName}}) Delete(ctx context.Context, {{.IdName}} {{.IdType}}, clear []string, delete []string) (err error) {
+	return s.DeleteList(ctx, []{{.IdType}}{{"{"}}{{.IdName}}{{"}"}}, clear, delete)
 }
 
-func (s *{{.StructName}}) DeleteList(ctx context.Context, ids []{{.IdType}}) (err error) {
-	return s.db.WithContext(ctx).Where("{{.IdName}} in (?)", ids).Delete(&{{.ModelName}}{}).Error
+func (s *{{.StructName}}) DeleteList(ctx context.Context, {{.IdName}}s []{{.IdType}}, clear []string, delete []string) (err error) {
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) (err error) {
+		vs := make([]{{.IdType}}, 0, len({{.IdName}}s))
+		err = tx.Where("{{.IdName}} in (?)", {{.IdName}}s).Find(&vs).Error
+		if err != nil {
+			err = errors.Wrap(err, "获取数据失败")
+			return err
+		}
+		
+		if len(vs) == 0 {
+			err = errors.New("数据不存在")
+			return err
+		}
+		
+		for _, v := range vs {
+			for _, c := range clear {
+				if err = tx.Model(v).Association(c).Clear(); err != nil {
+					err = errors.Wrap(err, "取消关联数据失败")
+					return err
+				}
+			}
+
+			if err = tx.Select(delete).Delete(&v).Error; err != nil {
+				err = errors.Wrap(err, "删除数据失败")
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 func (s *{{.StructName}}) Get(ctx context.Context, {{.IdName}} {{.IdType}}, preload []string) (res {{.ModelName}}, err error) {
-	db := s.db.WithContext(ctx)
-
-	for _, pre := range preload {
-		db = db.Preload(pre)
+	list, _, err := s.List(ctx, []string{{"{"}}{{.IdName}}{{"}"}}, 0,0 , []string{}, nil, preload)
+	if err != nil {
+		return
 	}
-
-	return res, db.Where("{{.IdName}} = ?", {{.IdName}}).First(&res, {{.IdName}}).Error
+	
+	if len(list) == 0 {
+		err = errors.New("数据不存在")
+		return
+	}
+	
+	res = list[0]
+	return
 }
 
-func (s *{{.StructName}}) List(ctx context.Context, page int, pageSize int, order string, scope func(db *gorm.DB) *gorm.DB, preload []string) (list []{{.ModelName}}, total int, err error) {
+func (s *{{.StructName}}) List(ctx context.Context,{{.IdName}}s []{{.IdType}}, page int, pageSize int, orders []string, scope func(db *gorm.DB) *gorm.DB, preload []string) (list []{{.ModelName}}, total int64, err error) {
 	db := s.db.WithContext(ctx)
 
 	for _, pre := range preload {
@@ -47,19 +80,53 @@ func (s *{{.StructName}}) List(ctx context.Context, page int, pageSize int, orde
 	if scopeDB != nil {
 		db = scopeDB
 	}
-
-	if order != "" {
-		if strings.HasPrefix(order, "-") {
-			db = db.Order(strings.TrimPrefix(order, "-") + " desc")
-		} else {
-			db = db.Order(order)
-		}
+	
+	if len({{.IdName}}s) != 0 {
+		db = db.Where("name in (?)", names)
 	}
 
-	err = db.Count(&total).Offset((page - 1) * pageSize).Limit(pageSize).Find(&list).Error
+	for _, order := range orders {
+		if order != "" {
+			if strings.HasPrefix(order, "-") {
+				db = db.Order(strings.TrimPrefix(order, "-") + " desc")
+			} else {
+				db = db.Order(order)
+			}
+		}
+	}
+	
+	db = db.Count(&total)
+	
+	if page != 0 && pageSize != 0 {
+		db = db.Offset((page - 1) * pageSize).Limit(pageSize)
+	}
+
+	err = db.Find(&list).Error
 	return
 }
 
-func (s *{{.StructName}}) Save(ctx context.Context, {{.IdName}} {{.IdType}}, v *{{.ModelName}}) (err error) {
-	return s.db.WithContext(ctx).Where("{{.IdName}} = ?", {{.IdName}}).Save(v).Error
+
+func (s *service) UpdateList(ctx context.Context, vs []{{.ModelName}}, clear []string) (err error) {
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) (err error) {
+		for _, v := range vs {
+			for _, c := range clear {
+				err = tx.Model(&v).Association(c).Clear()
+				if err != nil {
+					err = errors.Wrap(err, "取消关联数据失败")
+					return err
+				}
+			}
+	
+			if err = tx.Save(&v).Error; err != nil {
+				err = errors.Wrap(err, "保存数据失败")
+				return err
+			}
+		}
+		
+		return nil
+	})
+}
+
+func (s *{{.StructName}}) Update(ctx context.Context, v {{.ModelName}}, clear []string) (err error) {
+	return s.UpdateList(ctx, []{{.ModelName}}{v}, clear)
 }

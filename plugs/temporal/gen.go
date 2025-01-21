@@ -21,7 +21,7 @@ func Gen(j *jen.File, option gen.Option, implGoTypeMetes []gen.InterfaceGoTypeMe
 
 	parseImpl := common.NewInterfaceSerialize(option.Pkg)
 
-	j.Line().Func().Id("initTemporal").Params(jen.Id("i").Id("do.Injector")).Params(
+	j.Line().Comment("@do provide").Line().Func().Id("InitTemporal").Params(jen.Id("i").Id("do.Injector")).Params(
 		jen.Id("t").Op("*").Id("Temporal"), jen.Id("err").Id("error"),
 	).BlockFunc(func(g *jen.Group) {
 		g.Id(`w := do.MustInvoke[worker.Worker](i)`).Line()

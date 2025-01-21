@@ -5,10 +5,11 @@ import (
 	"encoding/hex"
 	"fmt"
 	"go/types"
-	"golang.org/x/tools/go/packages"
 	"log"
 	"strconv"
 	"strings"
+
+	"golang.org/x/tools/go/packages"
 
 	"github.com/fitan/jennifer/jen"
 )
@@ -345,7 +346,8 @@ func toCodeBasic(t types.BasicKind, st *jen.Statement) *jen.Statement {
 	case types.Float64:
 		return st.Float64()
 	default:
-		panic(fmt.Sprintf("unsupported type %d", t))
+		return st.Id("unsupported")
+		// panic(fmt.Sprintf("unsupported type %T", t))
 	}
 }
 

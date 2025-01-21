@@ -332,7 +332,6 @@ func (d *DataFieldMap) saveField(m map[string]Field, name string, field Field) {
 	//	m[name] = field
 	//}
 
-	return
 }
 
 // func (d *DataFieldMap) Parse(prefix []string, name string, t types.Type, doc *ast.CommentGroup) {
@@ -359,6 +358,13 @@ func (d *DataFieldMap) Parse(f Field) {
 		return
 	case *types.Array:
 	case *types.Named:
+		// 为了处理循环引用
+		if len(f.Path) >= 2 && f.Path[0] == lo.LastOrEmpty(f.Path) {
+			firstNamed, ok := d.NamedMap[f.Path[0]]
+			if ok && firstNamed.Type.T.String() == f.Type.T.String() {
+				return
+			}
+		}
 		d.saveField(d.NamedMap, f.Name, f)
 		d.Parse(Field{
 			Name:          f.Name,
@@ -786,7 +792,7 @@ func (d *Copy) GenSlice() jen.Statement {
 			bind.Add(v.DestIdPath().Op("=").Add(srcV.SrcIdPath()))
 			continue
 		}
-		bind.Add(v.DestIdPath().Op("=").Make(v.Type.TypeAsJenComparePkgName(d.Pkg), jen.Id("0"), jen.Id("len").Call(srcV.SrcIdPath())))
+		bind.Add(v.DestIdPath().Op("=").Make(v.Type.TypeAsJenComparePkgName(d.Pkg), jen.Id("len").Call(srcV.SrcIdPath()), jen.Id("len").Call(srcV.SrcIdPath())))
 		block := v.DestIdPath().Index(jen.Id("i")).Op("=").Add(srcV.SrcIdPath()).Index(jen.Id("i"))
 		if !v.Type.ListInner.Basic {
 			srcLiner := srcV.Type.ListInner
@@ -815,10 +821,7 @@ func (d *Copy) GenSlice() jen.Statement {
 
 			block = v.DestIdPath().Index(jen.Id("i")).Op("=").Id("d." + nestCopy.FnName()).Call(srcV.SrcIdPath().Index(jen.Id("i")))
 		}
-		bind.Add(jen.For(
-			jen.Id("i").Op(":=").Lit(0),
-			jen.Id("i").Op("<").Id("len").Call(srcV.SrcIdPath()),
-			jen.Id("i").Op("++")).
+		bind.Add(jen.For(jen.Id(fmt.Sprintf("i,_ := range %s", srcV.SrcIdPath().GoString()))).
 			Block(
 				block,
 			))

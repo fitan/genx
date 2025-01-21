@@ -1,6 +1,7 @@
 package kithttp
 
 import (
+	"encoding/json"
 	"fmt"
 	"go/ast"
 	"go/token"
@@ -156,6 +157,9 @@ func (r RequestParam) Annotations() string {
 }
 
 func (r RequestParam) ToVal() jen.Code {
+	if r.HasNamed {
+		return jen.Var().Id(r.ParamNameAlias()).Id(r.BasicType)
+	}
 	return jen.Var().Id(r.ParamNameAlias()).Id(r.ParamTypeName)
 	// return jen.Var().Id(r.ParamNameAlias()).Id(r.ParamTypeName)
 	//switch r.ParamType {
@@ -808,7 +812,9 @@ func (k *KitRequest) ParseRequest() {
 		})
 	}
 	if !hasFindRequest {
-		panic("not find request" + k.RequestName)
+
+		b, _ := json.Marshal(k)
+		panic("not find request" + string(b))
 	}
 }
 

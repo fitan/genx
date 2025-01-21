@@ -1,22 +1,22 @@
-type httpCrud{{.StructName}} interface {
+type httpCrud{{upFirst .StructName}} interface {
 	// 创建
 	// @kit-http / POST
 	// @kit-http-request CreateRequest true
 	Create(ctx context.Context, req CreateRequest) (res CreateResponse, err error)
 	// 批量创建
-	// @kit-http /batch POST
+	// @kit-http /batch/create POST
 	// @kit-http-request CreateListRequest
 	CreateList(ctx context.Context, req CreateListRequest) (res CreateResponse, err error)
 	// 删除
-	// @kit-http /{{"{"}}{{lowerCamel .IdName}}{{"}"}} DELETE
+	// @kit-http /{{"{"}}{{.IdName}}{{"}"}} DELETE
 	// @kit-http-request DeleteRequest
 	Delete(ctx context.Context, req DeleteRequest) (res DeleteResponse, err error)
 	// 批量删除
-	// @kit-http /batch DELETE
+	// @kit-http /batch/delete DELETE
 	// @kit-http-request DeleteListRequest
 	DeleteList(ctx context.Context, req DeleteListRequest) (res DeleteListResponse, err error)
 	// 获取
-	// @kit-http /{{"{"}}{{lowerCamel .IdName}}{{"}"}} GET
+	// @kit-http /{{"{"}}{{.IdName}}{{"}"}} GET
 	// @kit-http-request GetRequest
 	Get(ctx context.Context, req GetRequest) (res GetResponse, err error)
 	// 列表
@@ -24,9 +24,13 @@ type httpCrud{{.StructName}} interface {
 	// @kit-http-request ListRequest
 	List(ctx context.Context, req ListRequest) (list ListResponse, total int64, err error)
 	// 更新
-	// @kit-http /{{"{"}}{{lowerCamel .IdName}}{{"}"}} PUT
+	// @kit-http /{{"{"}}{{.IdName}}{{"}"}} PUT
 	// @kit-http-request UpdateRequest
 	Update(ctx context.Context, req UpdateRequest) (res UpdateResponse, err error)
+	// 批量更新
+	// @kit-http /batch/update PUT
+	// @kit-http-request UpdateListRequest
+	UpdateList(ctx context.Context, req UpdateListRequest) (res UpdateListResponse, err error)
 }
 
 func (s *{{.StructName}}) Create(ctx context.Context, req CreateRequest) (res CreateResponse, err error) {
@@ -52,17 +56,17 @@ func (s *{{.StructName}}) CreateList(ctx context.Context, req CreateListRequest)
 }
 
 func (s *{{.StructName}}) Delete(ctx context.Context, req DeleteRequest) (res DeleteResponse, err error) {
-	err = s.{{.GetModelFnName}}().Delete(ctx, req.{{.IdName}})
+	err = s.{{.GetModelFnName}}().Delete(ctx, req.{{camel .IdName}}, nil, nil)
 	return
 }
 
 func (s *{{.StructName}}) DeleteList(ctx context.Context, req DeleteListRequest) (res DeleteListResponse, err error) {
-	err = s.{{.GetModelFnName}}().DeleteList(ctx, req.{{plural (camel .IdName)}})
+	err = s.{{.GetModelFnName}}().DeleteList(ctx, req.{{plural (camel .IdName)}}, nil, nil)
 	return
 }
 
 func (s *{{.StructName}}) Get(ctx context.Context, req GetRequest) (res GetResponse, err error) {
-	v, err := s.{{.GetModelFnName}}().Get(ctx, req.{{.IdName}}, nil)
+	v, err := s.{{.GetModelFnName}}().Get(ctx, req.{{camel .IdName}}, nil)
 	if err != nil {
 		return
 	}
@@ -74,7 +78,7 @@ func (s *{{.StructName}}) Get(ctx context.Context, req GetRequest) (res GetRespo
 }
 
 func (s *{{.StructName}}) List(ctx context.Context, req ListRequest) (list ListResponse, total int64, err error) {
-	vs, total, err := s.{{.GetModelFnName}}().List(ctx, req.Page, req.PageSize, req.Order, req.ListQuery.Scope, nil)
+	vs, total, err := s.{{.GetModelFnName}}().List(ctx,req.{{plural (camel .IdName)}}, req.Page, req.PageSize, req.Orders, req.ListQuery.Scope, nil)
 
 	lo.ForEach(vs, func(item {{.ModelName}}, index int) {
 		var v GetResponse
@@ -87,7 +91,7 @@ func (s *{{.StructName}}) List(ctx context.Context, req ListRequest) (list ListR
 }
 
 func (s *{{.StructName}}) Update(ctx context.Context, req UpdateRequest) (res UpdateResponse, err error) {
-	v, err := s.{{.GetModelFnName}}().Get(ctx, req.{{.IdName}}, nil)
+	v, err := s.{{.GetModelFnName}}().Get(ctx, req.{{camel .IdName}}, nil)
 	if err != nil {
 		err = errors.Wrap(err, "get failed")
 		return
@@ -96,10 +100,37 @@ func (s *{{.StructName}}) Update(ctx context.Context, req UpdateRequest) (res Up
 	// @copy
 	update2ModelDTO(&v, req.Body)
 
-	err = s.{{.GetModelFnName}}().Save(ctx, req.{{.IdName}}, &v)
+	err = s.{{.GetModelFnName}}().Update(ctx, v, nil)
 	if err != nil {
 		err = errors.Wrap(err, "save failed")
 		return
 	}
 	return
+}
+
+func (s *service) UpdateList(ctx context.Context, req UpdateListRequest) (res UpdateListResponse, err error) {
+	{{plural .IdName}} := lo.Map(req.Body, func(item UpdateListItem, index int) string {
+		return item.{{camel .IdName}}
+	})
+	vs, _, err := s.ModelFilter().List(ctx, names, 0, 0, nil, nil, nil)
+	if err != nil {
+		err = errors.Wrap(err, "get list failed")
+		return
+	}
+	
+	lo.ForEach(req.Body, func(item UpdateListItem, index int) {
+		// @copy
+		update2ModelDTO(&vs[index], item.UpdateBody)
+	})
+	
+	
+	err = s.{{.GetModelFnName}}().UpdateList(ctx, vs, nil)
+	
+	if err != nil {
+		err = errors.Wrap(err, "save list failed")
+		return
+	}
+	
+	return 
+
 }
