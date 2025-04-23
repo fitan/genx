@@ -157,10 +157,11 @@ func (r RequestParam) Annotations() string {
 }
 
 func (r RequestParam) ToVal() jen.Code {
-	if r.HasNamed {
-		return jen.Var().Id(r.ParamNameAlias()).Id(r.BasicType)
-	}
 	return jen.Var().Id(r.ParamNameAlias()).Id(r.ParamTypeName)
+	/* if r.HasNamed {
+		return jen.Var().Id(r.ParamNameAlias()).Id(r.ParamTypeName)
+	}
+	return jen.Var().Id(r.ParamNameAlias()).Id(r.ParamTypeName) */
 	// return jen.Var().Id(r.ParamNameAlias()).Id(r.ParamTypeName)
 	//switch r.ParamType {
 	//case "basic":
@@ -496,8 +497,8 @@ func (k *KitRequest) BindQueryParam() []jen.Code {
 		//r.URL.Query().Get("project")
 		varBind := jen.Id("r.URL.Query().Get").Call(jen.Lit(v.ParamName))
 
-		if !(v.ParamType == "basic" && v.BasicType == "string") {
-			castCode, err := CastMap(v.XType, v.ParamNameAlias(), v.ParamType, v.ParamTypeName, varBind)
+		if !(v.ParamType == "basic" && v.BasicType == "string") || v.HasNamed {
+			castCode, err := CastMap(v, varBind)
 			if err != nil {
 				panic(err)
 			}
@@ -591,7 +592,7 @@ func (k *KitRequest) BindFormParam() []jen.Code {
 				list = append(list, code)
 				continue
 			} else {
-				code, err := CastMap(v.XType, v.ParamNameAlias(), v.ParamType, v.ParamTypeName, jen.Id("r.FormValue").Call(jen.Lit(v.ParamName)))
+				code, err := CastMap(v, jen.Id("r.FormValue").Call(jen.Lit(v.ParamName)))
 				if err != nil {
 					panic("not support form param type " + v.ParamNameAlias() + "tID: " + tID)
 				}
@@ -718,10 +719,12 @@ func (k *KitRequest) BindEndpointCtxRequest() []jen.Code {
 func (k *KitRequest) BindRequest() []jen.Code {
 	list := make([]jen.Code, 0, 0)
 	for _, v := range k.Form.OrderSlice() {
-		code := lo.Ternary(v.HasNamed,
+		/* code := lo.Ternary(v.HasNamed,
 			jen.Call(lo.Ternary(v.HasPtr, jen.Id("*"+v.ParamTypeName), jen.Id(v.ParamTypeName))).Call(jen.Id(lo.Ternary(v.HasPtr, "&", "")+v.ParamNameAlias())),
 			jen.Id(lo.Ternary(v.HasPtr, "&", "")+v.ParamNameAlias()),
-		)
+		) */
+
+		code := jen.Id(lo.Ternary(v.HasPtr, "&", "") + v.ParamNameAlias())
 		reqBindVal := jen.Id("req").Dot(v.ParamPath).Op("=").Add(code)
 		list = append(list, reqBindVal)
 	}
@@ -745,10 +748,11 @@ func (k *KitRequest) BindRequest() []jen.Code {
 	}
 
 	for _, v := range k.Query.OrderSlice() {
-		code := lo.Ternary(v.HasNamed,
+		/* code := lo.Ternary(v.HasNamed,
 			jen.Call(lo.Ternary(v.HasPtr, jen.Id("*"+v.ParamTypeName), jen.Id(v.ParamTypeName))).Call(jen.Id(lo.Ternary(v.HasPtr, "&", "")+v.ParamNameAlias())),
 			jen.Id(lo.Ternary(v.HasPtr, "&", "")+v.ParamNameAlias()),
-		)
+		) */
+		code := jen.Id(lo.Ternary(v.HasPtr, "&", "") + v.ParamNameAlias())
 		reqBindVal := jen.Id("req").Dot(v.ParamPath).Op("=").Add(code)
 
 		if v.HasPtr {
@@ -1054,8 +1058,10 @@ func UrlValues(paramName, t, paramTypeName string) (res []jen.Code, err error) {
 	return
 }
 
-func CastMap(p *common.Type, paramName, t, paramTypeName string, code jen.Code) (res []jen.Code, err error) {
-	if t == "slice" && paramTypeName == "[]string" {
+func CastMap(req RequestParam, code jen.Code) (res []jen.Code, err error) {
+	paramName := req.ParamNameAlias()
+
+	if req.ParamType == "slice" && req.ParamTypeName == "[]string" {
 		res = append(res, jen.Id(paramName+"Str").Op(":=").Add(code))
 		res = append(res, jen.If(jen.Id(paramName+`Str != ""`)).Block(
 			jen.Id(paramName).Op("=").Id("strings.Split").Call(jen.Id(paramName+"Str"), jen.Lit(",")),
@@ -1063,7 +1069,7 @@ func CastMap(p *common.Type, paramName, t, paramTypeName string, code jen.Code) 
 		return
 	}
 
-	if t == "slice" && p.ListInner.Basic {
+	if req.ParamType == "slice" && req.XType.ListInner.Basic {
 		res = append(res, jen.Id(paramName+"Str").Op(":=").Add(code))
 		res = append(res, jen.If(jen.Id(paramName+`Str != ""`)).Block(
 			jen.Id(fmt.Sprintf(`lo.ForEachWhile(strings.Split(%s, ","), func(item string, index int) bool {
@@ -1079,11 +1085,12 @@ func CastMap(p *common.Type, paramName, t, paramTypeName string, code jen.Code) 
 
 		if err != nil {
 			return
-		}`, paramName+"Str", paramName, p.ListInner.BasicType.String(), paramName, upFirst(p.ListInner.BasicType.String()), paramName, paramName, paramName)),
+		}`, paramName+"Str", paramName, req.XType.ListInner.BasicType.String(), paramName, upFirst(req.XType.ListInner.BasicType.String()), paramName, paramName, paramName)),
 		))
 
 		return
 	}
+
 	var m = map[string]string{
 		"basic.int":     "cast.ToIntE",
 		"basic.int8":    "cast.ToInt8E",
@@ -1097,8 +1104,8 @@ func CastMap(p *common.Type, paramName, t, paramTypeName string, code jen.Code) 
 		"basic.uint64":  "cast.ToUint64E",
 		"basic.float32": "cast.ToFloat32E",
 		"basic.float64": "cast.ToFloat64E",
-		"basic.string":  "cast.ToStringE",
-		"basic.bool":    "cast.ToBoolE",
+		/* "basic.string":  "cast.ToStringE", */
+		"basic.bool": "cast.ToBoolE",
 
 		"map.int":   "cast.ToStringMapIntE",
 		"map.int64": "cast.ToStringMapInt64E",
@@ -1107,26 +1114,29 @@ func CastMap(p *common.Type, paramName, t, paramTypeName string, code jen.Code) 
 		"struct.time.Time":    "cast.ToTimeE",
 		"basic.time.Duration": "cast.ToDurationE",
 	}
-	var ok bool
-	var hasType bool
-	mKey := t + "." + paramTypeName
-	fnStr, ok := m[mKey]
-	if !ok {
+	// var ok bool
+	// var hasType bool
+	// var mKey string
+	mKey := req.ParamType + "." + req.BasicType
+	fnStr, _ := m[mKey]
+	/* if !ok {
 		hasType = true
 		//return
-		fnStr, ok = m[t+"."+p.BasicType.String()]
-		if !ok {
-			err = fmt.Errorf("CastMap not found %s %s", t, paramTypeName)
-			return
+		if req.XType.BasicType.String() != "string" {
+			fnStr, ok = m[req.ParamType+"."+req.XType.BasicType.String()]
+			if !ok {
+				err = fmt.Errorf("CastMap not found %s %s", req.ParamType, req.ParamTypeName)
+				return
+			}
 		}
-	}
+	} */
 
 	paramStr := paramName + "Str"
 	varParamStr := jen.Id(paramStr).Op(":=").Add(code)
 	paramStrCode := jen.Id(paramStr)
-	if t == "slice" {
+	/* if req.ParamType == "slice" {
 		paramStrCode = jen.Id("strings.Split").Call(paramStrCode, jen.Lit(","))
-	}
+	} */
 
 	switch mKey {
 	case "struct.time.Time":
@@ -1136,13 +1146,17 @@ func CastMap(p *common.Type, paramName, t, paramTypeName string, code jen.Code) 
 	}
 
 	ifParamStr := jen.If(jen.Id(paramStr).Op("!=").Lit("")).BlockFunc(func(group *jen.Group) {
-		if hasType {
-			group.List(jen.Id(paramName+"Assert"), jen.Id(paramName+"Err")).Op(":=").Id(fnStr).Call(paramStrCode).Line()
-			group.If(jen.Id(paramName+"Err").Op("!=").Nil()).Block(
-				jen.Err().Op("=").Id(paramName+"Err"),
-				jen.Return(),
-			)
-			group.Id(paramName).Op("=").Id(paramTypeName).Call(jen.Id(paramName + "Assert"))
+		if req.HasNamed {
+			if fnStr != "" {
+				group.List(jen.Id(paramName+"Assert"), jen.Id(paramName+"Err")).Op(":=").Id(fnStr).Call(paramStrCode).Line()
+				group.If(jen.Id(paramName+"Err").Op("!=").Nil()).Block(
+					jen.Err().Op("=").Id(paramName+"Err"),
+					jen.Return(),
+				)
+				group.Id(paramName).Op("=").Id(req.ParamTypeName).Call(jen.Id(paramName + "Assert"))
+			} else {
+				group.Id(paramName).Op("=").Id(req.ParamTypeName).Call(jen.Id(paramStr))
+			}
 		} else {
 			group.List(jen.Id(paramName), jen.Err()).Op("=").Id(fnStr).Call(paramStrCode).Line()
 			group.If(jen.Err().Op("!=").Nil()).Block(

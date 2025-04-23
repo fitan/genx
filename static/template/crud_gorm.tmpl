@@ -70,15 +70,17 @@ func (s *{{.StructName}}) Get(ctx context.Context, {{.IdName}} {{.IdType}}, prel
 }
 
 func (s *{{.StructName}}) List(ctx context.Context,{{.IdName}}s []{{.IdType}}, page int, pageSize int, orders []string, scope func(db *gorm.DB) *gorm.DB, preload []string) (list []{{.ModelName}}, total int64, err error) {
-	db := s.db.WithContext(ctx)
+	db := s.db.WithContext(ctx).Model(&{{.ModelName}}{})
 
 	for _, pre := range preload {
 		db = db.Preload(pre)
 	}
 
-	scopeDB := scope(db)
-	if scopeDB != nil {
-		db = scopeDB
+	if scope != nil {
+		scopeDB := scope(db)
+		if scopeDB != nil {
+			db = scopeDB
+		}
 	}
 	
 	if len({{.IdName}}s) != 0 {
