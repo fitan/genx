@@ -138,6 +138,24 @@ func (s *HttpCrud) findTypeStruct(modelId string) (*types.Struct, *packages.Pack
 			}
 		}
 	}
+	preloadPkg, ok := s.Option.PreloadPkg[pkgName]
+
+	if ok {
+		for _, v := range preloadPkg {
+			if v.TypesInfo != nil {
+				for e, t := range v.TypesInfo.Uses {
+					// if t.Type != nil &&  lo.LastOrEmpty(strings.Split(t., "/")) == modelId {
+					if e != nil && e.Name == typeName {
+						if structT, ok := t.Type().Underlying().(*types.Struct); ok {
+							return structT, v
+						}
+						// fmt.Println("name", e.Name, "Id", t.Id(), "Name", t.Name(), "TypeString", t.Type().String(), "underlying", t.Type().Underlying())
+					}
+				}
+			}
+		}
+
+	}
 
 	return nil, nil
 }

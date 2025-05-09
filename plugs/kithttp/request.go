@@ -119,6 +119,10 @@ type RequestParam struct {
 	XTypeID string
 }
 
+func (r RequestParam) GotoCastMap() bool {
+	return !(r.ParamType == "basic" && r.BasicType == "string") || r.HasNamed
+}
+
 func (r RequestParam) FormDataSwagType() string {
 	switch r.XTypeID {
 	case "*multipart.FileHeader", "interface{io.Reader; io.ReaderAt; io.Seeker; io.Closer}", "[]*multipart.FileHeader":
@@ -497,7 +501,7 @@ func (k *KitRequest) BindQueryParam() []jen.Code {
 		//r.URL.Query().Get("project")
 		varBind := jen.Id("r.URL.Query().Get").Call(jen.Lit(v.ParamName))
 
-		if !(v.ParamType == "basic" && v.BasicType == "string") || v.HasNamed {
+		if v.GotoCastMap() {
 			castCode, err := CastMap(v, varBind)
 			if err != nil {
 				panic(err)
@@ -756,7 +760,7 @@ func (k *KitRequest) BindRequest() []jen.Code {
 		reqBindVal := jen.Id("req").Dot(v.ParamPath).Op("=").Add(code)
 
 		if v.HasPtr {
-			reqBindVal = jen.If(jen.Id(v.ParamNameAlias() + "Str" + `!= ""`)).Block(reqBindVal)
+			reqBindVal = jen.If(lo.Ternary(v.GotoCastMap(), jen.Id(v.ParamNameAlias()+"Str"+`!= ""`), jen.Id(v.ParamNameAlias()+`!= ""`))).Block(reqBindVal)
 		}
 		list = append(list, reqBindVal)
 	}

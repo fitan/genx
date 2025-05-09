@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -50,4 +51,16 @@ func Last2DirName(s string) string {
 	}
 
 	return ""
+}
+
+// 根据 import path 获取当前项目包的绝对路径
+func GetPkgAbsPath(importPath string) (string, error) {
+	cmd := exec.Command("go", "list", "-f", "{{.Dir}}", importPath)
+	
+	out, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	
+	return strings.TrimSpace(string(out)), nil
 }

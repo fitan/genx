@@ -112,7 +112,7 @@ func (s *service) UpdateList(ctx context.Context, req UpdateListRequest) (res Up
 	{{plural .IdName}} := lo.Map(req.Body, func(item UpdateListItem, index int) string {
 		return item.{{camel .IdName}}
 	})
-	vs, _, err := s.ModelFilter().List(ctx, names, 0, 0, nil, nil, nil)
+	vs, _, err := s.{{.GetModelFnName}}().List(ctx, {{plural .IdName}}, 0, 0, nil, nil, nil)
 	if err != nil {
 		err = errors.Wrap(err, "get list failed")
 		return

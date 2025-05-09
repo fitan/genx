@@ -2,6 +2,7 @@ package gen
 
 import (
 	"embed"
+	"fmt"
 	"go/ast"
 	"go/types"
 	"os"
@@ -375,7 +376,7 @@ func (x *X) UpdateTUI(plugName string, f func() (gens []GenResult, err error)) {
 	return
 }
 
-func NewXByPkg(static embed.FS, p *packages.Package, tui *Model, config *Config) (*X, error) {
+func NewXByPkg(static embed.FS, p *packages.Package, tui *Model, config *Config, preload map[string][]*packages.Package) (*X, error) {
 	x := &X{
 		WG: conc.NewWaitGroup(),
 		Option: Option{
@@ -385,6 +386,7 @@ func NewXByPkg(static embed.FS, p *packages.Package, tui *Model, config *Config)
 			Imports:         make([]*ast.ImportSpec, 0),
 			MainExtraImport: make([][]string, 0),
 			Config:          config,
+			PreloadPkg:      preload,
 		},
 		Metas: Metas{
 			Impl: ImplMeta{
@@ -424,13 +426,36 @@ func NewXByPkg(static embed.FS, p *packages.Package, tui *Model, config *Config)
 func NewX(static embed.FS, dir string, tui *Model) (res []*X, err error) {
 	config := findGenXConfig()
 
+	preloadMap := make(map[string][]*packages.Package, 0)
+
+	for _, preload := range config.Preloads {
+		d, err := common.GetPkgAbsPath(preload.Path)
+		if err != nil {
+			err = fmt.Errorf("preload %s err: %s", preload.Path, err.Error())
+			return nil, err
+		}
+		pkgs, err := common.LoadPkg(d)
+
+		if err != nil {
+			err = fmt.Errorf("preload %s err: %s", preload.Path, err.Error())
+			return nil, err
+		}
+
+		if preload.Alias == "" {
+			_, file := filepath.Split(preload.Path)
+			preloadMap[file] = pkgs
+		} else {
+			preloadMap[preload.Alias] = pkgs
+		}
+	}
+
 	ps, err := common.LoadPkg(dir)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, p := range ps {
-		x, err := NewXByPkg(static, p, tui, config)
+		x, err := NewXByPkg(static, p, tui, config, preloadMap)
 		if err != nil {
 			return nil, err
 		}
@@ -447,6 +472,7 @@ type Option struct {
 	Imports         []*ast.ImportSpec
 	MainExtraImport [][]string
 	Config          *Config
+	PreloadPkg      map[string][]*packages.Package
 }
 
 func findGenXConfig() *Config {
