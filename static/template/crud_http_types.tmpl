@@ -6,7 +6,7 @@ type CreateListRequest struct {
 }
 
 type DeleteRequest struct {
-	{{camel .IdName}} {{.IdType}} `json:"{{.IdName}}" param:"path,{{lowerCamel .IdName}}"`
+	{{camel .IdName}} {{.IdType}} `json:"{{lowerCamel .IdName}}" param:"path,{{lowerCamel .IdName}}"`
 }
 
 type DeleteListRequest struct {
@@ -14,14 +14,14 @@ type DeleteListRequest struct {
 }
 
 type GetRequest struct {
-	{{camel .IdName}} {{.IdType}} `json:"{{.IdName}}" param:"path,{{lowerCamel .IdName}}"`
+	{{camel .IdName}} {{.IdType}} `json:"{{lowerCamel .IdName}}" param:"path,{{lowerCamel .IdName}}"`
 }
 
 type ListRequest struct {
 	Page      int    `json:"page" param:"query,page"`
 	PageSize  int    `json:"pageSize" param:"query,pageSize"`
 	Orders    []string `json:"orders" param:"query,orders"`
-	{{plural (camel .IdName)}} []{{.IdType}} `json:"{{plural .IdName}}" param:"query,{{plural .IdName}}"`
+	{{plural (camel .IdName)}} []{{.IdType}} `json:"{{plural (lowerCamel .IdName)}}" param:"query,{{plural .IdName}}"`
 	ListQuery ListQuery `json:"query" param:",listQuery"`
 }
 

@@ -8,7 +8,7 @@ type httpCrud{{upFirst .StructName}} interface {
 	// @kit-http-request CreateListRequest
 	CreateList(ctx context.Context, req CreateListRequest) (res CreateResponse, err error)
 	// 删除
-	// @kit-http /{{"{"}}{{.IdName}}{{"}"}} DELETE
+	// @kit-http /{{"{"}}{{lowerCamel .IdName}}{{"}"}} DELETE
 	// @kit-http-request DeleteRequest
 	Delete(ctx context.Context, req DeleteRequest) (res DeleteResponse, err error)
 	// 批量删除
@@ -16,7 +16,7 @@ type httpCrud{{upFirst .StructName}} interface {
 	// @kit-http-request DeleteListRequest
 	DeleteList(ctx context.Context, req DeleteListRequest) (res DeleteListResponse, err error)
 	// 获取
-	// @kit-http /{{"{"}}{{.IdName}}{{"}"}} GET
+	// @kit-http /{{"{"}}{{lowerCamel .IdName}}{{"}"}} GET
 	// @kit-http-request GetRequest
 	Get(ctx context.Context, req GetRequest) (res GetResponse, err error)
 	// 列表
@@ -24,7 +24,7 @@ type httpCrud{{upFirst .StructName}} interface {
 	// @kit-http-request ListRequest
 	List(ctx context.Context, req ListRequest) (list ListResponse, total int64, err error)
 	// 更新
-	// @kit-http /{{"{"}}{{.IdName}}{{"}"}} PUT
+	// @kit-http /{{"{"}}{{lowerCamel .IdName}}{{"}"}} PUT
 	// @kit-http-request UpdateRequest
 	Update(ctx context.Context, req UpdateRequest) (res UpdateResponse, err error)
 	// 批量更新
