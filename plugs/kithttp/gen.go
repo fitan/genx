@@ -13,6 +13,65 @@ import (
 	"github.com/pkg/errors"
 )
 
+func CEPGen(opt gen.Option, imd common.InterfaceMetaDate) (res []gen.GenResult, err error) {
+	methodMap := make(map[string]Method, 0)
+	f := func(m common.InterfaceMethod) (*Method, error) {
+		kit, err := NewKit(m.Doc)
+		if err != nil {
+			panic(err)
+		}
+		// 如果没有不生成
+		if kit.Conf.Url == "" {
+			return nil, nil
+		}
+		kitRequest := NewKitRequest(opt.Pkg, m.Name, kit.Conf.HttpRequestName, kit.Conf.HttpRequestBody)
+		kitRequest.ParseRequest()
+
+		method := Method{Name: m.Name}
+		method.IMethod = m
+		method.RawKit = kit
+		method.Doc = m.Doc
+		method.RawDoc = m.RawDoc
+		method.KitRequest = kitRequest
+		method.AcceptsContext = m.AcceptsContext
+		method.ReturnsError = m.ReturnsError
+		method.KitRequestDecode = kitRequest.DecodeRequest()
+		return &method, nil
+	}
+	for _, v := range imd.Methods {
+		m, err := f(v)
+		if err != nil {
+			panic(err)
+		}
+
+		if m != nil {
+			methodMap[v.Name] = *m
+		}
+	}
+
+	tInput := &TemplateInputInterface{
+		Name:    "Service",
+		Methods: methodMap,
+		Doc:     *imd.Doc,
+		RawDoc:  *imd.RawDoc,
+		Opt:     opt,
+	}
+	cepStr, err := common.GenFileByTemplate(opt.Static, "ce_permission", tInput)
+	if err != nil {
+		err = errors.Wrapf(err, "gen file %s", "ce_permission")
+		return
+	}
+
+	res = append(res, gen.GenResult{
+		FileName: filepath.Join(opt.Dir, "cep.sql"),
+		FileStr:  cepStr,
+		Cover:    true,
+		Raw:      true,
+	})
+
+	return
+}
+
 func ObserverGen(opt gen.Option, imd common.InterfaceMetaDate) (res []gen.GenResult, err error) {
 
 	logFile, err := fs.ReadFile(opt.Static, "static/template/ce_log.tmpl")

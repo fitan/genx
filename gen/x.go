@@ -347,6 +347,7 @@ func (x *X) UpdateTUI(plugName string, f func() (gens []GenResult, err error)) {
 			})
 
 			cover, err := common.WriteGoWithOpt(gen.FileName, gen.FileStr, common.WriteOpt{
+				Raw:   gen.Raw,
 				Cover: gen.Cover,
 			})
 
@@ -452,6 +453,31 @@ func NewX(static embed.FS, dir string, tui *Model) (res []*X, err error) {
 	ps, err := common.LoadPkg(dir)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(ps) > 1 {
+		return nil, fmt.Errorf("dir %s has more than one package", dir)
+	}
+
+	p := ps[0]
+
+	pm := make(map[string]*packages.Package, 0)
+
+	for _, v := range p.Imports {
+		pm[v.PkgPath] = v
+	}
+
+	for name, v := range preloadMap {
+		for _, pv := range v {
+			if _, ok := pm[pv.PkgPath]; !ok {
+				iname := pv.Name
+				if name != "" {
+					iname = name
+				}
+				fmt.Println("preload name", iname, pv.Name)
+				p.Imports[iname] = pv
+			}
+		}
 	}
 
 	for _, p := range ps {

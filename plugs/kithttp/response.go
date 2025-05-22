@@ -1,7 +1,6 @@
 package kithttp
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/fitan/genx/common"
@@ -57,8 +56,8 @@ func (t *Type2ast) xtypeParse(codes *[]*jen.Statement, names []string, xt *commo
 			// typeName = strings.ReplaceAll(lastName, ".", "")
 			// typeName = strings.ReplaceAll(typeName, "_", "")
 			// typeName = strings.ReplaceAll(strings.TrimPrefix(xt.T.String(), t.pkg.PkgPath), ",", "")
-			fmt.Println("named:", xt.T.String())
-			fmt.Println("typeName:", typeName)
+			// fmt.Println("named:", xt.T.String())
+			// fmt.Println("typeName:", typeName)
 			// if !strings.Contains(xt.T.String(), "/") {
 			// 	// spew.Dump(xt.NamedType.Obj())
 			// 	return jen.Id(xt.NamedType.Obj().Pkg().Name()).Dot(xt.NamedType.Obj().Name())

@@ -65,6 +65,7 @@ func main() {
 					item.RegImpl(&temporal.Plug{})
 					item.RegCall(&plugCopy.Plug{})
 					item.RegImpl(&kithttp.Plug{})
+					item.RegImpl(&kithttp.CEPermissionSqlPlug{})
 					item.RegImpl(&kithttp.ObserverPlug{})
 					item.RegImpl(&alert.Plug{})
 					item.Gen()

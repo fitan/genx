@@ -43,15 +43,15 @@ func testCopy() {
 	}
 
 	// var sliceLabelSource []Label
-	var sliceSelectTarget []Select
+	// var sliceSelectTarget []Select
 
 	// @copy
 	// sliceLabelCopy(&sliceSelectTarget, &sliceLabelSource)
 
-	fmt.Println(target)
-	fmt.Println(sliceTarget)
-	fmt.Println(mapTarget)
-	fmt.Println(sliceSelectTarget)
+	// fmt.Println(target)
+	// fmt.Println(sliceTarget)
+	// fmt.Println(mapTarget)
+	// fmt.Println(sliceSelectTarget)
 }
 
 type Label struct {

@@ -249,6 +249,7 @@ func (g *GlobalX) UpdateTUI(plugName string, f func() (gens []GenResult, err err
 
 			cover, err := common.WriteGoWithOpt(gen.FileName, gen.FileStr, common.WriteOpt{
 				Cover: gen.Cover,
+				Raw:   gen.Raw,
 			})
 
 			g.TUI.FileEnd(UpdateTreeReq{

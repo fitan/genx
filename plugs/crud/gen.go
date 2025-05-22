@@ -127,7 +127,7 @@ func (s *HttpCrud) findTypeStruct(modelId string) (*types.Struct, *packages.Pack
 
 	for _, v := range s.Option.Pkg.Imports {
 		if v.Name == pkgName && v.TypesInfo != nil {
-			for e, t := range v.TypesInfo.Uses {
+			for e, t := range v.TypesInfo.Defs {
 				// if t.Type != nil &&  lo.LastOrEmpty(strings.Split(t., "/")) == modelId {
 				if e != nil && e.Name == typeName {
 					if structT, ok := t.Type().Underlying().(*types.Struct); ok {

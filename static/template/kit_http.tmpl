@@ -5,10 +5,6 @@
 var validate = validator.New()
 {{end}}
 
-/*
-{{$.CEPermissionSql}}
-*/
-
 func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.ServerOption) http.Handler {
 	var ems []endpoint.Middleware
 

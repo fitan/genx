@@ -167,4 +167,5 @@ type GenResult struct {
 	FileName string
 	FileStr  string
 	Cover    bool
+	Raw      bool
 }
