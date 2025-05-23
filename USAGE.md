@@ -1,5 +1,36 @@
 # `genx` Usage Guide
 
+## Table of Contents
+
+- [What is `genx`?](#what-is-genx)
+- [Installation](#installation)
+- [Running `genx`](#running-genx)
+- [Configuration (`genx.yaml`)](#configuration-genxyaml)
+  - [`imports`](#imports)
+  - [`preloads`](#preloads)
+  - [Example `genx.yaml`](#example-genxyaml)
+- [TUI Output](#tui-output)
+- [Annotation Syntax (Magic Comments)](#annotation-syntax-magic-comments)
+  - [1. `@directive` Style (Primary)](#1-directive-style-primary)
+  - [2. `@FieldDirective` Style (Legacy/Alternative)](#2-fielddirective-style-legacyalternative)
+  - [3. `INSET` Style (Implicit Content Lines)](#3-inset-style-implicit-content-lines)
+  - [Important Notes:](#important-notes)
+- [Plugins](#plugins)
+  - [`@log`](#log)
+  - [`@trace`](#trace)
+  - [`@otel`](#otel)
+  - [`@enum`](#enum)
+  - [`@gq` (GORM Query Scopes)](#gq-gorm-query-scopes)
+  - [`@crud`](#crud)
+  - [`@kit-http-client`](#kit-http-client)
+  - [`@temporal`](#temporal)
+  - [`@copy` (Struct Copying)](#copy-struct-copying)
+  - [`@kit` (Go kit HTTP Service Generation)](#kit-go-kit-http-service-generation)
+  - [`@cep` (CE Permission SQL Generation)](#cep-ce-permission-sql-generation)
+  - [`@observer` (Logging and Tracing Middleware Generation)](#observer-logging-and-tracing-middleware-generation)
+  - [`@alert`](#alert)
+  - [`@do` (Dependency Injection Setup)](#do-dependency-injection-setup)
+
 ## What is `genx`?
 
 `genx` is a code generator for Go. It works by parsing special annotations (comments) within your Go source code files. The primary purpose of `genx` is to help reduce boilerplate code and maintain consistency across your projects by automating the generation of repetitive code patterns.
@@ -176,12 +207,19 @@ If a line within a Go doc comment block *does not* start with an `@` symbol, `ge
 
 ### `@log`
 
-*   **Purpose:** Generates a logging middleware for a Go interface. This middleware logs method calls, parameters, execution time, and errors using the `slog` library. It's designed to work with dependency injection using `github.com/samber/do/v2` for logger provisioning.
-*   **Target:** Go interfaces.
-*   **Directive:** `@log`
-*   **Arguments:** None.
+#### Purpose
+Generates a logging middleware for a Go interface. This middleware logs method calls, parameters, execution time, and errors using the `slog` library. It's designed to work with dependency injection using `github.com/samber/do/v2` for logger provisioning.
 
-**Usage:**
+#### Target
+Go interfaces.
+
+#### Directive
+`@log`
+
+#### Arguments
+None.
+
+#### Usage
 
 To use the `@log` plugin, annotate your service interface definition with `// @log`.
 
@@ -202,7 +240,7 @@ type Service interface {
 }
 ```
 
-**Generated Code (`myservice/logging.go`):**
+#### Generated Code (`myservice/logging.go`)
 
 `genx` will generate a `logging.go` file in the `myservice` package. This file will contain:
 
@@ -266,7 +304,7 @@ func NewLogging(i do.Injector) func(next Service) Service {
 }
 ```
 
-**Setup (using `samber/do/v2`):**
+#### Setup (using `samber/do/v2`)
 
 You would typically register this logging middleware when setting up your services with `do`:
 
@@ -340,12 +378,19 @@ func (s *myServiceImpl) NoReturn(ctx context.Context, data string) {
 
 ### `@trace`
 
-*   **Purpose:** Generates a tracing middleware for a Go interface using OpenTelemetry. This middleware creates a new span for each method call, records method parameters as span attributes, captures errors, and sets the span status accordingly. It's designed for use with `github.com/samber/do/v2` for dependency injection of the `TracerProvider`.
-*   **Target:** Go interfaces.
-*   **Directive:** `@trace`
-*   **Arguments:** None.
+#### Purpose
+Generates a tracing middleware for a Go interface using OpenTelemetry. This middleware creates a new span for each method call, records method parameters as span attributes, captures errors, and sets the span status accordingly. It's designed for use with `github.com/samber/do/v2` for dependency injection of the `TracerProvider`.
 
-**Usage:**
+#### Target
+Go interfaces.
+
+#### Directive
+`@trace`
+
+#### Arguments
+None.
+
+#### Usage
 
 Annotate your service interface definition with `// @trace`.
 
@@ -365,7 +410,7 @@ type Service interface {
 }
 ```
 
-**Generated Code (`myservice/trace.go`):**
+#### Generated Code (`myservice/trace.go`)
 
 `genx` will generate a `trace.go` file in the `myservice` package. This file will include:
 
@@ -428,7 +473,7 @@ func NewTracing(i do.Injector) func(next Service) Service {
 }
 ```
 
-**Setup (using `samber/do/v2` and OpenTelemetry SDK):**
+#### Setup (using `samber/do/v2` and OpenTelemetry SDK)
 
 You would register this tracing middleware similarly to the logging middleware, ensuring an OpenTelemetry `TracerProvider` is also provided.
 
@@ -505,12 +550,19 @@ func (s *myServiceImpl) GetItem(ctx context.Context, itemID string) (itemName st
 
 ### `@otel`
 
-*   **Purpose:** Generates a comprehensive OpenTelemetry middleware for a Go interface. This middleware combines tracing, logging (using `slog`), and metrics (status counter, total counter, duration histogram) for each method call. It relies on `github.com/samber/do/v2` for injecting necessary OpenTelemetry and logging components.
-*   **Target:** Go interfaces.
-*   **Directive:** `@otel`
-*   **Arguments:** None.
+#### Purpose
+Generates a comprehensive OpenTelemetry middleware for a Go interface. This middleware combines tracing, logging (using `slog`), and metrics (status counter, total counter, duration histogram) for each method call. It relies on `github.com/samber/do/v2` for injecting necessary OpenTelemetry and logging components.
 
-**Usage:**
+#### Target
+Go interfaces.
+
+#### Directive
+`@otel`
+
+#### Arguments
+None.
+
+#### Usage
 
 Annotate your service interface definition with `// @otel`.
 
@@ -530,7 +582,7 @@ type StringService interface {
 }
 ```
 
-**Generated Code (`custompkg/otel.go`):**
+#### Generated Code (`custompkg/otel.go`)
 
 `genx` will create an `otel.go` file in the `custompkg` package. This file contains:
 
@@ -646,7 +698,7 @@ func NewOtel(i do.Injector) func(next StringService) StringService { // Your int
 }
 ```
 
-**Setup (using `samber/do/v2`, OpenTelemetry SDK):**
+#### Setup (using `samber/do/v2`, OpenTelemetry SDK)
 
 You'll need to provide all the dependencies: `trace.Tracer`, `*slog.Logger`, and the named metrics.
 
@@ -668,7 +720,7 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace" 
-	"log/slog"
+	sloglib "log/slog" // Renamed to avoid conflict
 )
 
 // Setup OTel Tracer Provider
@@ -693,8 +745,8 @@ func main() {
 	injector := do.New()
 
 	// Provide slog.Logger
-	do.Provide(injector, func(i do.Injector) (*slog.Logger, error) {
-		return slog.New(slog.NewJSONHandler(os.Stdout, nil)), nil
+	do.Provide(injector, func(i do.Injector) (*sloglib.Logger, error) { // Used sloglib
+		return sloglib.New(sloglib.NewJSONHandler(os.Stdout, nil)), nil
 	})
 
 	// Provide OTel TracerProvider and Tracer
@@ -753,16 +805,22 @@ func S_ToUpper(s string) string {
 
 ### `@enum`
 
-*   **Purpose:** Generates a set of helper methods and constants for an integer-based enum type, making it more robust and easier to use. It creates string representations, remarks, and parsing functions.
-*   **Target:** Go type specifications (typically an `int` type aliased for the enum).
-*   **Directive:** `@enum`
-*   **Arguments:**
-    *   The `@enum` directive takes one or more positional string arguments.
-    *   Each argument defines an enum member and should be in the format `"Key:Remark"` or simply `"Key"`.
-        *   `Key`: The identifier for the enum member (e.g., `Active`, `DefaultUser`). This is used to generate constant names like `Status_Active`.
-        *   `Remark`: A descriptive string for the enum member (e.g., `User is currently active`). This is accessible via the `Remark()` method. If only `"Key"` is provided, the remark is empty.
+#### Purpose
+Generates a set of helper methods and constants for an integer-based enum type, making it more robust and easier to use. It creates string representations, remarks, and parsing functions.
 
-**Usage:**
+#### Target
+Go type specifications (typically an `int` type aliased for the enum).
+
+#### Directive
+`@enum`
+
+#### Arguments
+*   The `@enum` directive takes one or more positional string arguments.
+*   Each argument defines an enum member and should be in the format `"Key:Remark"` or simply `"Key"`.
+    *   `Key`: The identifier for the enum member (e.g., `Active`, `DefaultUser`). This is used to generate constant names like `Status_Active`.
+    *   `Remark`: A descriptive string for the enum member (e.g., `User is currently active`). This is accessible via the `Remark()` method. If only `"Key"` is provided, the remark is empty.
+
+#### Usage
 
 Define an integer type for your enum and annotate its type specification with `// @enum(...)` and the member definitions.
 
@@ -777,7 +835,7 @@ package types
 type Status int // The base type is typically int
 ```
 
-**Generated Code (`types/enum.go`):**
+#### Generated Code (`types/enum.go`)
 
 `genx` will generate an `enum.go` file in the `types` package (or wherever `Status` is defined). This file will contain:
 
@@ -841,7 +899,7 @@ type Status int // The base type is typically int
     (Also generates `var _StatusValue = map[int]Status{...}` mapping int values to enum constants.)
 
 
-**Using the Generated Enum:**
+#### Using the Generated Enum
 
 ```go
 package main
@@ -871,17 +929,22 @@ func main() {
 
 ### `@gq` (GORM Query Scopes)
 
-*   **Purpose:** Generates dynamic GORM query scope functions based on the fields of a user-defined query struct. This allows for building reusable and type-safe query logic.
-*   **Target:** Go structs.
-*   **Generated File:** `gorm_scope.go` in the same package as the annotated struct.
+#### Purpose
+Generates dynamic GORM query scope functions based on the fields of a user-defined query struct. This allows for building reusable and type-safe query logic.
 
-**Primary Directive (on the query struct itself):**
+#### Target
+Go structs.
 
-*   `// @gq <model.GormModel>`
-    *   This directive marks a struct as a GORM query definition.
-    *   `<model.GormModel>`: **Required.** The fully qualified name of the GORM model struct that the query will target (e.g., `myproject/model.User`, `model.Product`).
+#### Generated File
+`gorm_scope.go` in the same package as the annotated struct.
 
-**Field-Level Directives (on fields within the query struct):**
+#### Primary Directive (on the query struct itself)
+
+`// @gq <model.GormModel>`
+*   This directive marks a struct as a GORM query definition.
+*   `<model.GormModel>`: **Required.** The fully qualified name of the GORM model struct that the query will target (e.g., `myproject/model.User`, `model.Product`).
+
+#### Field-Level Directives (on fields within the query struct)
 
 These directives customize how each field in the query struct translates to a GORM query condition.
 
@@ -927,7 +990,7 @@ These directives customize how each field in the query struct translates to a GO
     *   If `<value1>`, `<value2>` are provided, they are passed as additional arguments to the GORM method, often used to specify which fields of the struct to query against if it's not a GORM model itself. Example: `db.Where(&q.MyStructField, "field1", "field2")`.
     *   If no values are provided, it's typically `db.Where(&q.MyStructField)`.
 
-**Generated Code (`gorm_scope.go`):**
+#### Generated Code (`gorm_scope.go`)
 
 *   A method `func (q *QueryStructName) Scope(db *gorm.DB) *gorm.DB` is generated.
 *   This `Scope` method:
@@ -1032,7 +1095,7 @@ func (q *ProfileQuery) Scope(db *gorm.DB) *gorm.DB {
 }
 ```
 
-**Using the Scope:**
+#### Using the Scope
 
 ```go
 package main // Or your relevant package
@@ -1070,11 +1133,16 @@ func main() {
 
 ### `@crud`
 
-*   **Purpose:** Generates boilerplate code for CRUD (Create, Read, Update, Delete) operations. It supports two distinct modes: generating GORM-based database services or generating HTTP service structures and types.
-*   **Target:** Go structs (these structs act as configuration/markers for the CRUD generation).
-*   **Directive:** `@crud`
+#### Purpose
+Generates boilerplate code for CRUD (Create, Read, Update, Delete) operations. It supports two distinct modes: generating GORM-based database services or generating HTTP service structures and types.
 
-**Arguments for the `@crud` directive (applied to the configuration struct):**
+#### Target
+Go structs (these structs act as configuration/markers for the CRUD generation).
+
+#### Directive
+`@crud`
+
+#### Arguments for the `@crud` directive (applied to the configuration struct)
 
 *   `type="<mode>"`: **Required.** Specifies the generation mode.
     *   `"gorm"`: Generates a GORM-based CRUD service implementation.
@@ -1084,7 +1152,7 @@ func main() {
 *   `idType="<GoType>"`: **Required.** The Go type of the primary key field (e.g., `uint`, `string`, `uuid.UUID`).
 *   `preload="<field1,field2.subfield>"`: *(Used only by `type="http"`)* A comma-separated string specifying which fields of the GORM model should be deeply copied when generating the `GetResponse` struct for HTTP responses. Supports dot notation for nested fields (e.g., `User,Order.OrderItems`).
 
-**Usage:**
+#### Usage
 
 Define an empty struct and annotate it with `@crud` and its required arguments. The name of this struct itself doesn't directly influence the generated code's naming as much as the `model` argument does.
 
@@ -1102,7 +1170,7 @@ type UserHttpCRUDConfig struct{}
 
 ---
 
-**Mode: `type="gorm"`**
+#### Mode: `type="gorm"`
 
 *   **Purpose:** Generates a base service layer for GORM-based CRUD operations.
 *   **Generated Files:**
@@ -1163,7 +1231,7 @@ func main() {
 
 ---
 
-**Mode: `type="http"`**
+#### Mode: `type="http"`
 
 *   **Purpose:** Generates types for HTTP request/response payloads and a base structure for an HTTP service.
 *   **Generated Files:**
@@ -1219,17 +1287,22 @@ import (
 
 ### `@kit-http-client`
 
-*   **Purpose:** Generates a Go kit HTTP client implementation based on a Go interface definition. This client includes features like service discovery, load balancing (round-robin), and retries.
-*   **Target:** Go interfaces.
-*   **Generated File:** `kit_http_client.go` in the same package as the interface.
+#### Purpose
+Generates a Go kit HTTP client implementation based on a Go interface definition. This client includes features like service discovery, load balancing (round-robin), and retries.
 
-**Interface-Level Directives:**
+#### Target
+Go interfaces.
+
+#### Generated File
+`kit_http_client.go` in the same package as the interface.
+
+#### Interface-Level Directives
 
 *   `// @basePath <base_path_string>`
     *   **Optional.** Placed on the interface definition.
     *   Specifies a common base path prefix for all HTTP URLs defined in the methods of this interface (e.g., `/api/v2`).
 
-**Method-Level Directives (on methods within the annotated interface):**
+#### Method-Level Directives (on methods within the annotated interface)
 
 *   `// @kit-http <http_url_path> <http_method>`
     *   **Required.** Defines the endpoint for the method.
@@ -1241,7 +1314,7 @@ import (
     *   `<RequestStructName>`: The name of the Go struct that encapsulates all input parameters for this method.
     *   `[<send_entire_struct_as_body>]`: **Optional.** If a non-empty string (e.g., "true", "body") is provided, the entire `<RequestStructName>` instance is marshaled as the JSON request body. Otherwise, specific fields within `<RequestStructName>` must be tagged with `param:"body,..."` to contribute to the request body.
 
-**Field-Level Struct Tags (within the `<RequestStructName>`):**
+#### Field-Level Struct Tags (within the `<RequestStructName>`)
 
 Fields in the request struct (specified by `@kit-http-request`) use the `param` struct tag to map them to HTTP request components:
 
@@ -1253,7 +1326,7 @@ Fields in the request struct (specified by `@kit-http-request`) use the `param` 
         *   `body`: Designates the field as part of the JSON request body. If `<send_entire_struct_as_body>` was *not* set in `@kit-http-request`, the generated client typically expects one field to be tagged `param:"body,..."` to be the source of the request body. If `<send_entire_struct_as_body>` *was* set, this tag might be redundant or used for specific field naming within the JSON if the struct's field name differs. The generator code implies that if `RequestBody` (derived from `[<send_entire_struct_as_body>]`) is false, it will use the *first* field it finds tagged with `param:"body,..."` as the request body.
     *   `<name>`: The name of the path variable, query parameter key, header name, or JSON field name (though for `body` with whole-struct sending, JSON field names usually come from struct field names or `json` tags).
 
-**Generated Code (`kit_http_client.go`):**
+#### Generated Code (`kit_http_client.go`)
 
 *   **`HttpClientImpl` Interface:** A new interface mirroring the annotated one, but with method signatures suitable for a client:
     `MethodName(ctx context.Context, req RequestStructName, option *Option) (res ResponseStructName, err error)`
@@ -1352,7 +1425,7 @@ func (s *HttpClientService) CreateUser(ctx context.Context, req CreateUserReques
 // ... other helper types and functions ...
 ```
 
-**Using the Generated Client:**
+#### Using the Generated Client
 
 ```go
 package main
@@ -1429,25 +1502,30 @@ func main() {
 
 ### `@temporal`
 
-*   **Purpose:** Integrates a Go interface (service) with Temporal.io by generating code to register its methods as Temporal activities and providing workflow-callable wrapper methods to execute these activities.
-*   **Target:** Go interfaces.
-*   **Generated File:** `temporal.go` in the same package as the annotated interface.
+#### Purpose
+Integrates a Go interface (service) with Temporal.io by generating code to register its methods as Temporal activities and providing workflow-callable wrapper methods to execute these activities.
 
-**Interface-Level Directive:**
+#### Target
+Go interfaces.
+
+#### Generated File
+`temporal.go` in the same package as the annotated interface.
+
+#### Interface-Level Directive
 
 *   `// @temporal`
     *   Placed on the interface definition.
     *   Acts as a marker to indicate that this interface should be processed for Temporal integration.
     *   Does not take any arguments.
 
-**Method-Level Directives (on methods within the `@temporal` annotated interface):**
+#### Method-Level Directives (on methods within the `@temporal` annotated interface)
 
 *   `// @temporal-activity`
     *   **Required** on methods intended to be Temporal activities.
     *   Marks the method for registration with a Temporal worker.
     *   Causes a corresponding wrapper method to be generated on a `Temporal` struct, allowing the activity to be called from a Temporal workflow.
 
-**Generated Code (`temporal.go`):**
+#### Generated Code (`temporal.go`)
 
 1.  **`Temporal` Struct:**
     ```go
@@ -1535,7 +1613,7 @@ func (t *Temporal) ProcessTransfer(ctx workflow.Context, transactionID string, a
 }
 ```
 
-**Using with Temporal:**
+#### Using with Temporal
 
 1.  **Service Implementation:** Implement your `TransferService` interface.
     ```go
@@ -1651,11 +1729,16 @@ func (t *Temporal) ProcessTransfer(ctx workflow.Context, transactionID string, a
 
 ### `@copy` (Struct Copying)
 
-*   **Purpose:** Generates type-safe functions to copy data between two Go structs (or types). It handles nested structures, slices, maps, pointers, and allows for custom field mapping through annotations.
-*   **Target:** Go function call expressions. The signature of the annotated function defines the source and destination types.
-*   **Generated File:** `copy.go` (in the package of the annotated function).
+#### Purpose
+Generates type-safe functions to copy data between two Go structs (or types). It handles nested structures, slices, maps, pointers, and allows for custom field mapping through annotations.
 
-**Triggering Mechanism:**
+#### Target
+Go function call expressions. The signature of the annotated function defines the source and destination types.
+
+#### Generated File
+`copy.go` (in the package of the annotated function).
+
+#### Triggering Mechanism
 
 You trigger the `@copy` plugin by defining a function (whose body is usually empty or ignored) and annotating it with `// @copy`. The function's signature dictates the copy operation:
 
@@ -1674,7 +1757,7 @@ func ConvertUserToUserDTO(dto *UserDTO, user model.User) {
 *   The first parameter is the **destination** (e.g., `dto *UserDTO`). It **must be a pointer type**.
 *   The second parameter is the **source** (e.g., `user model.User`).
 
-**Generated Code (`copy.go`):**
+#### Generated Code (`copy.go`)
 
 For the example `ConvertUserToUserDTO` above, `genx` would generate:
 
@@ -1719,7 +1802,7 @@ For the example `ConvertUserToUserDTO` above, `genx` would generate:
         *   Deep copying for slices and maps of complex types by generating copy logic for their elements.
         *   Recursive generation: If it encounters nested structs that need copying (e.g., `User.Address` to `UserDTO.AddressDTO`), it will try to generate or use another `Copy` method for those specific types (e.g., `AddressToAddressDTOCopy`).
 
-**Field Mapping Customization (Annotations on Source or Destination Struct Fields):**
+#### Field Mapping Customization (Annotations on Source or Destination Struct Fields)
 
 You can annotate fields within your source or destination structs to control how they are mapped. These annotations are typically placed as comments above the field.
 
@@ -1731,7 +1814,7 @@ You can annotate fields within your source or destination structs to control how
 *   `// @copy-target-method <method_name_on_source>`: (Usually on source field) Instead of direct field access from the source, call `<method_name_on_source>()` on the source struct (or the specific source field if it's a nested struct) to get the value. This value is then copied to the destination field matched by name/path.
 *   `// @copy-auto-cast`: (Boolean, e.g., `@copy-auto-cast`) If present, may enable more lenient type conversions (e.g., between different integer types or to/from string) if direct assignment is not possible. Specific casting behaviors depend on the generator's implementation details.
 
-**Matching Strategy:**
+#### Matching Strategy
 
 The plugin attempts to match fields between source and destination by considering:
 1.  Explicit mapping via `@copy-target-path` or `@copy-target-name`.
@@ -1790,13 +1873,17 @@ This plugin is highly useful for reducing boilerplate when mapping between diffe
 
 ### `@kit` (Go kit HTTP Service Generation)
 
-*   **Purpose:** Scaffolds a Go kit HTTP service based on a Go interface. It generates Go kit endpoints, HTTP transport layers (request/response encode/decode functions), and HTTP handlers.
-*   **Target:** Go interfaces.
-*   **Generated Files:**
-    *   `endpoint.go`: Contains Go kit endpoint definitions for each method in the annotated interface.
-    *   `http.go`: Contains HTTP transport layer logic, including request decoding functions, response encoding functions, and Go kit HTTP server handlers.
+#### Purpose
+Scaffolds a Go kit HTTP service based on a Go interface. It generates Go kit endpoints, HTTP transport layers (request/response encode/decode functions), and HTTP handlers.
 
-**Interface-Level Directives (applied to the interface definition):**
+#### Target
+Go interfaces.
+
+#### Generated Files
+*   `endpoint.go`: Contains Go kit endpoint definitions for each method in the annotated interface.
+*   `http.go`: Contains HTTP transport layer logic, including request decoding functions, response encoding functions, and Go kit HTTP server handlers.
+
+#### Interface-Level Directives (applied to the interface definition)
 
 *   `// @basePath <base_path_string>`
     *   **Optional.** Specifies a common base path prefix for all HTTP URLs defined for the methods in this interface (e.g., `/api/v1`, `/catalog`).
@@ -1809,7 +1896,7 @@ This plugin is highly useful for reducing boilerplate when mapping between diffe
 *   `// @swag <true_or_false>`
     *   **Optional.** An interface-level switch to enable/disable Swagger/OpenAPI documentation generation for all endpoints derived from this interface. Defaults to true if not specified. Individual methods can override this.
 
-**Method-Level Directives (on methods within the `@kit` annotated interface):**
+#### Method-Level Directives (on methods within the `@kit` annotated interface)
 
 *   `// @kit-http <http_url_path> <http_method>`
     *   **Required** for a method to be exposed as an HTTP endpoint.
@@ -1826,7 +1913,7 @@ This plugin is highly useful for reducing boilerplate when mapping between diffe
 *   `// @swag <true_or_false>`
     *   **Optional.** Method-level switch to enable/disable Swagger/OpenAPI documentation generation for this specific endpoint. Overrides the interface-level `@swag` setting.
 
-**Field-Level Struct Tags (within the `<RequestStructName>`):**
+#### Field-Level Struct Tags (within the `<RequestStructName>`)
 
 Fields within your request structs (those named in `@kit-http-request`) use struct tags to specify how they should be populated from the incoming HTTP request:
 
@@ -1837,7 +1924,7 @@ Fields within your request structs (those named in `@kit-http-request`) use stru
 *   `validate:"<rules>"`: Specifies validation rules for the field, often using syntax compatible with libraries like `govalidator` or `go-playground/validator` (e.g., `validate:"required,min=1,max=100"`). The generated decode functions typically incorporate calls to a validator.
 *   `form:"<name>"`: For HTML form values (e.g., from `application/x-www-form-urlencoded` bodies).
 
-**Generated Code (`endpoint.go` and `http.go`):**
+#### Generated Code (`endpoint.go` and `http.go`)
 
 *   **`endpoint.go`:**
     *   Defines Go kit `endpoint.Endpoint` for each method annotated with `@kit-http`.
@@ -1913,7 +2000,7 @@ Conceptual Generated Code:
 // }
 ```
 
-**Using the Generated Service:**
+#### Using the Generated Service
 You would typically implement the `Service` interface, then in your `main.go` or setup code:
 1. Create an instance of your service implementation.
 2. Call the generated `NewEndpoint` function to create the Go kit endpoints, possibly applying middleware.
@@ -1924,21 +2011,27 @@ This plugin automates much of the boilerplate involved in setting up Go kit HTTP
 
 ### `@cep` (CE Permission SQL Generation)
 
-*   **Purpose:** Generates SQL `INSERT` statements for a permissions system, apparently named `sys_permission`. It creates SQL entries for a parent menu item (derived from the annotated interface) and child permission entries for each HTTP method exposed via the `@kit-http` directive within that interface.
-*   **Target:** Go interfaces (the same ones annotated with `@kit` and its sub-directives).
-*   **Generated File:** `cep.sql` in the same package as the interface.
-*   **Note:** This plugin seems to be for a specific internal use case ("CE" likely refers to "Cloud Engine" or a similar internal system) and might not be relevant for all users of `genx`.
+#### Purpose
+Generates SQL `INSERT` statements for a permissions system, apparently named `sys_permission`. It creates SQL entries for a parent menu item (derived from the annotated interface) and child permission entries for each HTTP method exposed via the `@kit-http` directive within that interface.
 
-**Prerequisites:**
+#### Target
+Go interfaces (the same ones annotated with `@kit` and its sub-directives).
+
+#### Generated File
+`cep.sql` in the same package as the interface.
+
+**Note:** This plugin seems to be for a specific internal use case ("CE" likely refers to "Cloud Engine" or a similar internal system) and might not be relevant for all users of `genx`.
+
+#### Prerequisites
 
 *   The interface should be annotated for the `@kit` plugin, especially with `@basePath` on the interface and `@kit-http` on methods, as `@cep` uses this information.
 
-**Interface-Level Information Used:**
+#### Interface-Level Information Used
 
 *   The primary comment on the interface definition (e.g., `// ServiceName is a service for...`) is used as the `alias` and `description` for the parent menu item in the SQL.
 *   `@basePath` is used to construct the `path` for the parent menu item (e.g., `<basePath>/index`).
 
-**Method-Level Information Used:**
+#### Method-Level Information Used
 
 *   For each method annotated with `// @kit-http <path> <http_method>`:
     *   The method's primary comment is used as the `alias` and `description` for the permission entry.
@@ -1947,7 +2040,7 @@ This plugin automates much of the boilerplate involved in setting up Go kit HTTP
     *   A unique name for the permission entry is generated (e.g., based on base path, method name, and HTTP method).
     *   A unique ID (integer) is generated by hashing the unique name.
 
-**Generated SQL (`cep.sql` - conceptual):**
+#### Generated SQL (`cep.sql` - conceptual)
 
 The file will contain a series of `INSERT INTO sys_permission (...) VALUES (...);` statements.
 
@@ -1993,18 +2086,23 @@ This plugin is useful if you are integrating your `genx`-generated services with
 
 ### `@observer` (Logging and Tracing Middleware Generation)
 
-*   **Purpose:** Generates Go kit service middleware for logging and tracing. This plugin seems to provide an alternative or possibly older way to add observability to Go kit services generated by `genx`, distinct from the more modular `@log` and `@trace` plugins.
-*   **Target:** Go interfaces (intended for services defined for Go kit).
-*   **Generated Files:**
-    *   `logging.go`: Contains logging middleware for the service.
-    *   `tracing.go`: Contains tracing middleware (appears to use OpenTracing, based on common imports seen in its generator).
-*   **Note:** This plugin might be specific to a particular setup or represent an earlier approach to observability within `genx`. For new projects, consider if `@log` and `@trace` (or the comprehensive `@otel`) offer more flexibility.
+#### Purpose
+Generates Go kit service middleware for logging and tracing. This plugin seems to provide an alternative or possibly older way to add observability to Go kit services generated by `genx`, distinct from the more modular `@log` and `@trace` plugins.
 
-**Prerequisites:**
+#### Target
+Go interfaces (intended for services defined for Go kit).
+
+#### Generated Files
+*   `logging.go`: Contains logging middleware for the service.
+*   `tracing.go`: Contains tracing middleware (appears to use OpenTracing, based on common imports seen in its generator).
+
+**Note:** This plugin might be specific to a particular setup or represent an earlier approach to observability within `genx`. For new projects, consider if `@log` and `@trace` (or the comprehensive `@otel`) offer more flexibility.
+
+#### Prerequisites
 
 *   The interface should ideally be one for which Go kit HTTP bindings are also being generated (e.g., using `@kit`), as observability is typically applied to service endpoints.
 
-**How it Works (Conceptual):**
+#### How it Works (Conceptual)
 
 The `@observer` plugin processes the annotated interface and uses templates (`ce_log.tmpl`, `ce_trace.tmpl`) to generate:
 
@@ -2020,7 +2118,7 @@ The `@observer` plugin processes the annotated interface and uses templates (`ce
     *   These wrapper methods create spans (likely using OpenTracing, judging by typical imports like `opentracing-go`) for each call, record tags (like method name, errors), and finish the span upon completion.
     *   A constructor function to create an instance of this tracing middleware, typically expecting a tracer instance (e.g., `opentracing.Tracer`) and the next service.
 
-**Usage:**
+#### Usage
 
 Annotate your service interface with `// @observer`.
 
@@ -2037,7 +2135,7 @@ type MyObservedService interface {
 }
 ```
 
-**Generated Files (Conceptual Content):**
+#### Generated Files (Conceptual Content)
 
 `myservice/logging.go`:
 ```go
@@ -2090,7 +2188,7 @@ type MyObservedService interface {
 // ... other methods ...
 ```
 
-**Applying the Middleware (in Go kit setup):**
+#### Applying the Middleware (in Go kit setup)
 
 If you are using this with services generated by `@kit`, you would typically apply these middlewares when constructing your endpoints or service instances.
 
@@ -2117,17 +2215,22 @@ This plugin provides a template-based approach to add logging and tracing middle
 
 ### `@alert`
 
-*   **Purpose:** Generates a Go kit style middleware that enables sending alerts when specific service methods return errors. It integrates with an external alerting service.
-*   **Target:** Go interfaces.
-*   **Generated File:** `alert.go` in the same package as the annotated interface.
+#### Purpose
+Generates a Go kit style middleware that enables sending alerts when specific service methods return errors. It integrates with an external alerting service.
 
-**Interface-Level Directive:**
+#### Target
+Go interfaces.
+
+#### Generated File
+`alert.go` in the same package as the annotated interface.
+
+#### Interface-Level Directive
 
 *   `// @alert`
     *   Placed on the interface definition.
     *   Marks the interface for processing by the `@alert` plugin. It does not take arguments itself.
 
-**Method-Level Directives (on methods within the `@alert` annotated interface):**
+#### Method-Level Directives (on methods within the `@alert` annotated interface)
 
 *   `// @alert-enable`
     *   **Required** on methods for which error alerting should be active. If this directive is absent, errors from that method will not trigger alerts via this middleware.
@@ -2139,7 +2242,7 @@ This plugin provides a template-based approach to add logging and tracing middle
 *   `// @alert-metrics <metrics_suffix>`
     *   **Optional.** A string suffix that gets appended to the default metrics identifier (which is `pkgName.MethodName`) when an alert is pushed. Example: if `metrics_suffix` is `"custom_metric"`, the identifier becomes `pkgName.MethodName.custom_metric`.
 
-**Generated Code (`alert.go`):**
+#### Generated Code (`alert.go`)
 
 1.  **`alert` Struct:**
     *   A struct named `alert` is generated. It holds:
@@ -2174,7 +2277,7 @@ This plugin provides a template-based approach to add logging and tracing middle
             *   `alertLevel`: Determined by `@alert-level` or the default.
     *   The method then calls the `next` service's corresponding method.
 
-**Dependencies & Assumptions:**
+#### Dependencies & Assumptions
 
 *   **`api.Service`:** Your project must define or import an `api` package with a `Service` interface (or concrete type) that has an `Alarm()` method, which in turn returns an object with a `Push(...)` method. The expected signature for `Push` is approximately:
     `Push(ctx context.Context, title string, content string, metricsKey string, level alarm.Level, silencePeriod int) error`
@@ -2236,11 +2339,16 @@ This plugin helps in centralizing alerting logic for service method failures.
 
 ### `@do` (Dependency Injection Setup)
 
-*   **Purpose:** Automates the registration of service providers with the `github.com/samber/do/v2` dependency injection library. It scans for annotated provider functions and generates a central `doInit` function to register them with a `do.Injector`.
-*   **Target:** Go functions across all processed packages.
-*   **Generated File:** `do_init.go`. This file is generated in the package of any function that is annotated with `@do(type="init")`. The `doInit` function within this file will register providers from *all* scanned packages.
+#### Purpose
+Automates the registration of service providers with the `github.com/samber/do/v2` dependency injection library. It scans for annotated provider functions and generates a central `doInit` function to register them with a `do.Injector`.
 
-**Function-Level Directives:**
+#### Target
+Go functions across all processed packages.
+
+#### Generated File
+`do_init.go`. This file is generated in the package of any function that is annotated with `@do(type="init")`. The `doInit` function within this file will register providers from *all* scanned packages.
+
+#### Function-Level Directives
 
 Functions should be annotated with `// @do(...)` to be processed by this plugin.
 
@@ -2250,7 +2358,7 @@ Functions should be annotated with `// @do(...)` to be processed by this plugin.
         *   `init`: This function's primary role is to mark its package as a location where a `do_init.go` file will be generated. The `doInit` function inside this generated file will contain the logic to register all discovered "provide" functions. The body of the function marked `type="init"` is not directly used by `genx`.
     *   `name="<service_name>"`: **Optional.** Only applicable if `type="provide"`. If specified, the provider function is registered using `do.ProvideNamed(injector, "<service_name>", yourProviderFunc)`. Otherwise, `do.Provide(injector, yourProviderFunc)` is used.
 
-**Generated Code (`do_init.go`):**
+#### Generated Code (`do_init.go`)
 
 *   A file named `do_init.go` is generated in each package that contains at least one function annotated with `@do(type="init")`.
 *   This file will contain a function: `func doInit(i do.Injector)`.
@@ -2259,7 +2367,7 @@ Functions should be annotated with `// @do(...)` to be processed by this plugin.
     *   Calls to `do.Provide(i, ...)` or `do.ProvideNamed(i, ...)` for every function that was annotated with `@do(type="provide")` across all scanned packages.
     *   Providers are registered in a deterministic order (sorted by package path, then by function name).
 
-**How It Works:**
+#### How It Works
 
 1.  `genx` scans all Go source files in the project.
 2.  It identifies all functions annotated with `@do(...)`.
@@ -2315,7 +2423,7 @@ func doInit(i do.Injector) {
 ```
 *(Note: The exact alias `servicesalias` is illustrative; `genx` will generate one if the package name `services` conflicts with other imports or local names.)*
 
-**Using the Generated `doInit`:**
+#### Using the Generated `doInit`
 
 In your application's main entry point:
 ```go
