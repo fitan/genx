@@ -26,7 +26,7 @@ func (s *{{.StructName}}) Delete(ctx context.Context, {{.IdName}} {{.IdType}}, c
 func (s *{{.StructName}}) DeleteList(ctx context.Context, {{.IdName}}s []{{.IdType}}, clear []string, delete []string) (err error) {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) (err error) {
 		vs := make([]{{.ModelName}}, 0, len({{.IdName}}s))
-		err = tx.Where("{{.IdName}} in (?)", {{.IdName}}s).Find(&vs).Error
+		err = tx.Where("`{{.IdName}}` in (?)", {{.IdName}}s).Find(&vs).Error
 		if err != nil {
 			err = errors.Wrap(err, "获取数据失败")
 			return err
@@ -84,7 +84,7 @@ func (s *{{.StructName}}) List(ctx context.Context,{{.IdName}}s []{{.IdType}}, p
 	}
 	
 	if len({{.IdName}}s) != 0 {
-		db = db.Where("{{.IdName}} in (?)", {{.IdName}}s)
+		db = db.Where("`{{.IdName}}` in (?)", {{.IdName}}s)
 	}
 
 	for _, order := range orders {
