@@ -240,16 +240,49 @@ func toCodeComparePkgNameString(pkg *packages.Package, t types.Type, s string) s
 	case *types.Struct:
 		return s + t.String()
 	case *types.Signature:
-		ts := types.TypeString(t, func(p *types.Package) string {
-			if p == nil {
-				return ""
+		// 手动构建函数签名，正确处理可变参数
+		var params []string
+		for i := 0; i < cast.Params().Len(); i++ {
+			param := cast.Params().At(i)
+			paramType := toCodeComparePkgNameString(pkg, param.Type(), "")
+
+			// 如果是最后一个参数且函数是可变参数，则添加...前缀
+			if i == cast.Params().Len()-1 && cast.Variadic() {
+				// 移除[]前缀，添加...前缀
+				if strings.HasPrefix(paramType, "[]") {
+					paramType = "..." + paramType[2:]
+				}
 			}
-			return p.Name()
-		})
-		if cast.Variadic() {
-			return "..." + ts
+
+			if param.Name() != "" {
+				params = append(params, param.Name()+" "+paramType)
+			} else {
+				params = append(params, paramType)
+			}
 		}
-		return ts
+
+		var results []string
+		for i := 0; i < cast.Results().Len(); i++ {
+			result := cast.Results().At(i)
+			resultType := toCodeComparePkgNameString(pkg, result.Type(), "")
+
+			if result.Name() != "" {
+				results = append(results, result.Name()+" "+resultType)
+			} else {
+				results = append(results, resultType)
+			}
+		}
+
+		signature := "(" + strings.Join(params, ", ") + ")"
+		if len(results) > 0 {
+			if len(results) == 1 && cast.Results().At(0).Name() == "" {
+				signature += " " + results[0]
+			} else {
+				signature += " (" + strings.Join(results, ", ") + ")"
+			}
+		}
+
+		return s + signature
 	default:
 		return s + t.String()
 	}
@@ -283,6 +316,10 @@ func toCodeComparePkgName(pkg *packages.Package, t types.Type, st *jen.Statement
 		return toCodeBasic(cast.Kind(), st)
 	case *types.Struct:
 		return st.Id(t.String())
+	case *types.Signature:
+		// 对于函数签名类型，返回func关键字加上签名
+		// 注意：这里不处理可变参数，因为Jennifer会在更高层处理
+		return st.Func().Params().Params()
 	}
 	panic("unsupported type " + t.String())
 }

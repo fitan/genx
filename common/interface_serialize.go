@@ -55,7 +55,20 @@ func (i *InterfaceSerialize) Parse(it *types.Interface, rawDoc *ast.CommentGroup
 			mParam.Name = pName
 			mParam.Type = t
 			mParam.XType = TypeOf(t)
-			mParam.ID = mParam.XType.TypeAsJenComparePkgNameString(i.pkg)
+
+			// 处理可变参数：如果是最后一个参数且函数是可变参数
+			if pi == ps.Len()-1 && signature.Variadic() {
+				// 获取类型字符串
+				typeStr := mParam.XType.TypeAsJenComparePkgNameString(i.pkg)
+				// 如果是切片类型，将[]替换为...
+				if strings.HasPrefix(typeStr, "[]") {
+					typeStr = "..." + typeStr[2:]
+				}
+				mParam.ID = typeStr
+			} else {
+				mParam.ID = mParam.XType.TypeAsJenComparePkgNameString(i.pkg)
+			}
+
 			params = append(params, mParam)
 		}
 

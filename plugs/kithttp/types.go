@@ -643,8 +643,13 @@ func genName(prefix string, n int, usedNames map[string]bool) string {
 // Call returns a string with the method call
 func (m Method) Call() string {
 	params := []string{}
-	for _, p := range m.IMethod.Params {
-		params = append(params, p.Name)
+	for i, p := range m.IMethod.Params {
+		paramName := p.Name
+		// 如果是最后一个参数且方法是可变参数，添加...
+		if i == len(m.IMethod.Params)-1 && m.IMethod.Variadic {
+			paramName += "..."
+		}
+		params = append(params, paramName)
 	}
 
 	return m.Name + "(" + strings.Join(params, ", ") + ")"
@@ -653,20 +658,37 @@ func (m Method) Call() string {
 // ParamsNames returns a list of method params names
 func (m Method) ParamsNames() string {
 	ss := []string{}
-	for _, p := range m.IMethod.Params {
-		ss = append(ss, p.Name)
+	for i, p := range m.IMethod.Params {
+		paramName := p.Name
+		// 如果是最后一个参数且方法是可变参数，添加...
+		if i == len(m.IMethod.Params)-1 && m.IMethod.Variadic {
+			paramName += "..."
+		}
+		ss = append(ss, paramName)
 	}
 	return strings.Join(ss, ", ")
 }
 
 func (m Method) ParamsNamesExcludeCtx() string {
 	ss := []string{}
+	nonCtxParams := []common.MethodParam{}
+
+	// 先收集非context参数
 	for _, p := range m.IMethod.Params {
 		if p.ID == "context.Context" {
 			continue
 		}
+		nonCtxParams = append(nonCtxParams, p)
+	}
 
-		ss = append(ss, p.Name)
+	// 然后处理可变参数
+	for i, p := range nonCtxParams {
+		paramName := p.Name
+		// 如果是最后一个非context参数且原方法是可变参数，添加...
+		if i == len(nonCtxParams)-1 && m.IMethod.Variadic {
+			paramName += "..."
+		}
+		ss = append(ss, paramName)
 	}
 	return strings.Join(ss, ", ")
 }
