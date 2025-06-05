@@ -41,7 +41,6 @@ func (s *{{.StructName}}) DeleteList(ctx context.Context, {{.IdName}}s []{{.IdTy
 			}
 
 			if err = tx.Delete(&v).Error; err != nil {
-			{{end}}
 				return errors.Wrap(err, "删除数据失败")
 			}
 		}
