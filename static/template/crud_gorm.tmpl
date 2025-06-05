@@ -1,15 +1,13 @@
 type {{.InterfaceName}} interface {
 	Create(ctx context.Context, v *{{.ModelName}}) (err error)
 	CreateList(ctx context.Context, vs []*{{.ModelName}}) (err error)
-	Delete(ctx context.Context, {{.IdName}} {{.IdType}},clear []string, delete []string) (err error)
+	Delete(ctx context.Context, {{.IdName}} {{.IdType}}, clear []string, delete []string) (err error)
 	DeleteList(ctx context.Context, {{.IdName}}s []{{.IdType}}, clear []string, delete []string) (err error)
 	Get(ctx context.Context, {{.IdName}} {{.IdType}}, preload []string) (res {{.ModelName}}, err error)
-	List(ctx context.Context, {{.IdName}}s []{{.IdType}},page int, pageSize int, orders []string, scope func(db *gorm.DB) *gorm.DB, preload []string) (list []{{.ModelName}}, total int64, err error)
-	Update(ctx context.Context, v {{.ModelName}}, clear []string) (err error)
-	UpdateList(ctx context.Context, vs []{{.ModelName}}, clear []string) (err error)
+	List(ctx context.Context, {{.IdName}}s []{{.IdType}}, page int, pageSize int, orders []string, scope func(db *gorm.DB) *gorm.DB, preload []string) (list []{{.ModelName}}, total int64, err error)
+	Update(ctx context.Context, v {{.ModelName}}, replace map[string]interface{}) (err error)
+	UpdateList(ctx context.Context, vs []{{.ModelName}}, replace map[string]interface{}) (err error)
 }
-
-
 
 func (s *{{.StructName}}) Create(ctx context.Context, v *{{.ModelName}}) (err error) {
 	return s.db.WithContext(ctx).Create(v).Error
@@ -24,30 +22,27 @@ func (s *{{.StructName}}) Delete(ctx context.Context, {{.IdName}} {{.IdType}}, c
 }
 
 func (s *{{.StructName}}) DeleteList(ctx context.Context, {{.IdName}}s []{{.IdType}}, clear []string, delete []string) (err error) {
-	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) (err error) {
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		vs := make([]{{.ModelName}}, 0, len({{.IdName}}s))
-		err = tx.Where("`{{.IdName}}` in (?)", {{.IdName}}s).Find(&vs).Error
+		err := tx.Where("`{{.IdName}}` in (?)", {{.IdName}}s).Find(&vs).Error
 		if err != nil {
-			err = errors.Wrap(err, "获取数据失败")
-			return err
+			return errors.Wrap(err, "获取数据失败")
 		}
 		
 		if len(vs) == 0 {
-			err = errors.New("数据不存在")
-			return err
+			return errors.New("数据不存在")
 		}
 		
 		for _, v := range vs {
 			for _, c := range clear {
 				if err = tx.Model(v).Association(c).Clear(); err != nil {
-					err = errors.Wrap(err, "取消关联数据失败")
-					return err
+					return errors.Wrap(err, "取消关联数据失败")
 				}
 			}
 
-			if err = tx.Select(delete).Delete(&v).Error; err != nil {
-				err = errors.Wrap(err, "删除数据失败")
-				return err
+			if err = tx.Delete(&v).Error; err != nil {
+			{{end}}
+				return errors.Wrap(err, "删除数据失败")
 			}
 		}
 		return nil
@@ -55,7 +50,7 @@ func (s *{{.StructName}}) DeleteList(ctx context.Context, {{.IdName}}s []{{.IdTy
 }
 
 func (s *{{.StructName}}) Get(ctx context.Context, {{.IdName}} {{.IdType}}, preload []string) (res {{.ModelName}}, err error) {
-	list, _, err := s.List(ctx, []string{{"{"}}{{.IdName}}{{"}"}}, 0,0 , []string{}, nil, preload)
+	list, _, err := s.List(ctx, []{{.IdType}}{{"{"}}{{.IdName}}{{"}"}}, 0, 0, []string{}, nil, preload)
 	if err != nil {
 		return
 	}
@@ -69,7 +64,7 @@ func (s *{{.StructName}}) Get(ctx context.Context, {{.IdName}} {{.IdType}}, prel
 	return
 }
 
-func (s *{{.StructName}}) List(ctx context.Context,{{.IdName}}s []{{.IdType}}, page int, pageSize int, orders []string, scope func(db *gorm.DB) *gorm.DB, preload []string) (list []{{.ModelName}}, total int64, err error) {
+func (s *{{.StructName}}) List(ctx context.Context, {{.IdName}}s []{{.IdType}}, page int, pageSize int, orders []string, scope func(db *gorm.DB) *gorm.DB, preload []string) (list []{{.ModelName}}, total int64, err error) {
 	db := s.db.WithContext(ctx).Model(&{{.ModelName}}{})
 
 	for _, pre := range preload {
@@ -107,28 +102,26 @@ func (s *{{.StructName}}) List(ctx context.Context,{{.IdName}}s []{{.IdType}}, p
 	return
 }
 
-
-func (s *service) UpdateList(ctx context.Context, vs []{{.ModelName}}, clear []string) (err error) {
-	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) (err error) {
-		for _, v := range vs {
-			for _, c := range clear {
-				err = tx.Model(&v).Association(c).Clear()
-				if err != nil {
-					err = errors.Wrap(err, "取消关联数据失败")
-					return err
-				}
-			}
-	
-			if err = tx.Save(&v).Error; err != nil {
-				err = errors.Wrap(err, "保存数据失败")
-				return err
-			}
-		}
-		
-		return nil
-	})
+func (s *{{.StructName}}) Update(ctx context.Context, v {{.ModelName}}, replace map[string]interface{}) (err error) {
+	return s.UpdateList(ctx, []{{.ModelName}}{v}, replace)
 }
 
-func (s *{{.StructName}}) Update(ctx context.Context, v {{.ModelName}}, clear []string) (err error) {
-	return s.UpdateList(ctx, []{{.ModelName}}{v}, clear)
+func (s *{{.StructName}}) UpdateList(ctx context.Context, vs []{{.ModelName}}, replace map[string]interface{}) (err error) {
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for _, v := range vs {
+			// 处理 replace 关联
+			for association, items := range replace {
+				err = tx.Model(&v).Association(association).Replace(items)
+				if err != nil {
+					return errors.Wrap(err, "替换关联数据失败")
+				}
+			}
+
+			if err = tx.Save(&v).Error; err != nil {
+				return errors.Wrap(err, "保存数据失败")
+			}
+		}
+
+		return nil
+	})
 }
