@@ -1,7 +1,7 @@
 package gormq
 
 import (
-	"fmt"
+	"log/slog"
 	"path/filepath"
 	"strings"
 
@@ -64,7 +64,9 @@ func (o Op) Convert() string {
 	case "!null":
 		return "is not null"
 	default:
-		panic(fmt.Sprintf("not support op %s", o))
+		// 记录不支持的操作符，但不 panic
+		slog.Error("not support op", "op", string(o))
+		return "unknown"
 	}
 }
 

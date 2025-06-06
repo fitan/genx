@@ -23,7 +23,12 @@ func (p *Plug) Gen(option gen.Option, implGoTypeMetes []gen.InterfaceGoTypeMeta)
 		meta, err := parseImpl.Parse(v.Obj, v.RawDoc, &v.Doc)
 		if err != nil {
 			slog.Error("parseImpl.Parse", err, slog.String("name", v.Obj.String()))
-			return nil, err
+			return nil, common.ParseError("failed to parse interface for alert plugin").
+				WithCause(err).
+				WithPlugin("@alert").
+				WithInterface(v.Name).
+				WithDetails("unable to parse interface metadata for alert generation").
+				Build()
 		}
 
 		f := Gen(option.Pkg, meta.Methods)

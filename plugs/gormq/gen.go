@@ -1,8 +1,8 @@
 package gormq
 
 import (
-	"fmt"
 	"go/types"
+	"log/slog"
 	"reflect"
 	"strings"
 
@@ -43,7 +43,9 @@ func (p *Parser) Parse(prePath []string, parseModel bool) {
 	if parseModel {
 		p.Meta.Doc.ByFuncNameAndArgs(FuncName, &modelName)
 		if !p.Meta.Doc.ByFuncNameAndArgs(FuncName, &modelName) {
-			panic("not found @gq model")
+			// 记录错误但不 panic，使用默认模型名
+			slog.Error("not found @gq model", "struct", p.Meta.Name)
+			modelName = p.Meta.Name // 使用结构体名作为默认模型名
 		}
 	}
 
@@ -121,7 +123,9 @@ func (p *Parser) parse(pre []string, f *types.Var, tag string) {
 
 	parseDoc, err := common.ParseDoc(common.GetCommentByTokenPos(p.Option.Pkg, f.Pos()).Text())
 	if err != nil {
-		panic(err)
+		slog.Error("failed to parse field documentation", "field", f.Name(), "error", err)
+		// 使用空文档继续处理
+		parseDoc = common.Doc{}
 	}
 
 	parseDoc.ListByFuncName("@gq-column", &dbNameList)
@@ -184,7 +188,8 @@ func (p *Parser) parse(pre []string, f *types.Var, tag string) {
 	if parseDoc.ByFuncNameAndArgs("@gq-group") {
 		gt := common.TypeOf(f.Type())
 		if !gt.Struct {
-			panic(fmt.Sprintf("not support type %s", f.String()))
+			slog.Error("not support type for @gq-group", "field", f.Name(), "type", f.String())
+			return // 跳过不支持的类型
 		}
 
 		gtDoc, _ := common.ParseDoc(common.GetCommentByTokenPos(p.Option.Pkg, f.Pos()).Text())

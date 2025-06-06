@@ -214,6 +214,11 @@ func (t Type) TypeAsJenComparePkgNameString(pkg *packages.Package) string {
 	return toCodeComparePkgNameString(pkg, t.T, "")
 }
 
+// ToCodeComparePkgNameString 导出版本用于测试
+func ToCodeComparePkgNameString(pkg *packages.Package, t types.Type, s string) string {
+	return toCodeComparePkgNameString(pkg, t, s)
+}
+
 func toCodeComparePkgNameString(pkg *packages.Package, t types.Type, s string) string {
 	switch cast := t.(type) {
 	case *types.Named:
@@ -240,7 +245,7 @@ func toCodeComparePkgNameString(pkg *packages.Package, t types.Type, s string) s
 	case *types.Struct:
 		return s + t.String()
 	case *types.Signature:
-		// 手动构建函数签名，正确处理可变参数
+		// 手动构建函数签名，正确处理可变参数，并添加 func 关键字
 		var params []string
 		for i := 0; i < cast.Params().Len(); i++ {
 			param := cast.Params().At(i)
@@ -282,7 +287,7 @@ func toCodeComparePkgNameString(pkg *packages.Package, t types.Type, s string) s
 			}
 		}
 
-		return s + signature
+		return s + "func" + signature
 	default:
 		return s + t.String()
 	}

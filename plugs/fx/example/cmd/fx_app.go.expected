@@ -1,0 +1,45 @@
+// 这是预期生成的代码示例
+package main
+
+import (
+	"go.uber.org/fx"
+	app "github.com/fitan/genx/plugs/fx/example/app"
+	infrastructure "github.com/fitan/genx/plugs/fx/example/infrastructure"
+	middleware "github.com/fitan/genx/plugs/fx/example/middleware"
+	services "github.com/fitan/genx/plugs/fx/example/services"
+)
+
+// FxOptions 返回所有自动收集的 fx.Option
+func FxOptions() []fx.Option {
+	return []fx.Option{
+		// Provide 选项 (按包路径和函数名排序)
+		fx.Provide(infrastructure.NewDatabase),
+		fx.Provide(infrastructure.NewLogger),
+		
+		fx.Provide(fx.Annotate(
+			services.NewUserService,
+			fx.As(new(services.UserService)),
+		)),
+		
+		fx.Provide(fx.Annotate(
+			services.NewUserHandler,
+			fx.ResultTags(`group:"handlers"`),
+		)),
+		
+		// Decorate 选项
+		fx.Decorate(fx.Annotate(
+			middleware.NewLoggingUserService,
+			fx.As(new(services.UserService)),
+		)),
+		
+		// Invoke 选项
+		fx.Invoke(app.InitDatabase),
+		fx.Invoke(app.StartApplication),
+	}
+}
+
+// NewApp 创建配置好的 fx.App
+func NewApp(opts ...fx.Option) *fx.App {
+	allOpts := append(FxOptions(), opts...)
+	return fx.New(allOpts...)
+}

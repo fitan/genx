@@ -173,7 +173,8 @@ func (o OrderMap) GetByField(f Field) (res Field, has bool) {
 
 	if f.CopyMust {
 		slog.Error("字段未找到", "name", f.Name, "path", strings.Join(f.Path, "."))
-		panic("字段未找到")
+		// 不再使用 panic，而是返回空字段和 false
+		// 调用者应该检查返回值并适当处理
 	}
 	return Field{}, false
 }

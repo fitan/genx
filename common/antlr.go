@@ -67,7 +67,7 @@ func (d *Doc) ByFuncNameAndArgs(name string, args ...*string) bool {
 	for i, arg := range f.Args {
 		record[i] = arg.Value
 	}
-	for i, _ := range args {
+	for i := range args {
 		*args[i] = record[i]
 	}
 

@@ -1,11 +1,12 @@
 package enum
 
 import (
-	"fmt"
-	"github.com/fitan/genx/parser"
-	"github.com/fitan/jennifer/jen"
 	"strconv"
 	"strings"
+
+	"github.com/fitan/genx/common"
+	"github.com/fitan/genx/parser"
+	"github.com/fitan/jennifer/jen"
 )
 
 type Enum struct {
@@ -66,7 +67,11 @@ func (e *Enum) Init() (err error) {
 			key = argSplit[0]
 			value = argSplit[1]
 		} else {
-			return fmt.Errorf("enum arg error: %s", arg)
+			return common.ValidationError("invalid enum argument format").
+				WithPlugin("@enum").
+				WithExtra("argument", arg.Value).
+				WithDetails("enum argument must be in format 'key:value' or 'key'. Example: @enum active:1 inactive:0").
+				Build()
 		}
 		args = append(args, Arg{
 			Key:   key,

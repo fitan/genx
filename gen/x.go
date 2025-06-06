@@ -72,145 +72,186 @@ func (x *X) RegFunc(plug FuncPlugImpl) {
 	x.Plugs.Func = append(x.Plugs.Func, plug)
 }
 
-func (x *X) Gen() {
-	x.typeGen()
-	x.implGen()
-	x.structGen()
-	x.typeSpecGen()
-	x.funcGen()
-	x.callGen()
-	x.WG.Wait()
+func (x *X) Gen() error {
+	// 使用安全执行包装器来处理代码生成
+	err := common.WithRecovery(func() error {
+		x.typeGen()
+		x.implGen()
+		x.structGen()
+		x.typeSpecGen()
+		x.funcGen()
+		x.callGen()
+		x.WG.Wait()
 
-	x.TUI.PkgEnd(UpdateTreeReq{
-		PkgName: x.Option.Pkg.PkgPath,
+		x.TUI.PkgEnd(UpdateTreeReq{
+			PkgName: x.Option.Pkg.PkgPath,
+		})
+		return nil
 	})
-	return
+
+	if err != nil {
+		return common.GenerateError("code generation failed").
+			WithCause(err).
+			WithExtra("package", x.Option.Pkg.PkgPath).
+			WithDetails("error occurred during code generation process").
+			Build()
+	}
+
+	return nil
 }
 
-func (x *X) Parse() {
+func (x *X) Parse() error {
 	for _, v := range x.Option.Pkg.Syntax {
-		astutil.Apply(v, func(c *astutil.Cursor) bool {
-			switch t := c.Node().(type) {
-			case *ast.CallExpr:
-				callDoc := common.GetCommentByTokenPos(x.Option.Pkg, t.Pos())
-				if callDoc == nil {
-					return false
+		err := x.parseFile(v)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (x *X) parseFile(file *ast.File) error {
+	var parseErr error
+
+	astutil.Apply(file, func(c *astutil.Cursor) bool {
+		switch t := c.Node().(type) {
+		case *ast.CallExpr:
+			callDoc := common.GetCommentByTokenPos(x.Option.Pkg, t.Pos())
+			if callDoc == nil {
+				return false
+			}
+
+			doc, err := common.ParseDoc(callDoc.Text())
+			if err != nil {
+				position := x.Option.Pkg.Fset.Position(t.Pos())
+				parseErr = common.ParseError("failed to parse call expression documentation").
+					WithCause(err).
+					WithLocation(position.Filename, position.Line, position.Column).
+					WithExtra("call_expression", t.Fun.(*ast.Ident).Name).
+					WithDetails("unable to parse documentation comment for call expression").
+					Build()
+				return false
+			}
+
+			for _, line := range doc {
+				var call CallGoTypeMeta
+				call.Name = t.Fun.(*ast.Ident).Name
+				call.Doc = doc
+				for _, param := range t.Args {
+					call.Params = append(call.Params, common.TypeOf(x.Option.Pkg.TypesInfo.TypeOf(param)))
 				}
-
-				doc, err := common.ParseDoc(callDoc.Text())
-				if err != nil {
-					position := x.Option.Pkg.Fset.Position(t.Pos())
-					slog.Error("parse doc error", "err", err, "fileName", position.Filename, "line", position.Line)
-					panic(err)
-				}
-
-				for _, line := range doc {
-					var call CallGoTypeMeta
-					call.Name = t.Fun.(*ast.Ident).Name
-					call.Doc = doc
-					for _, param := range t.Args {
-						call.Params = append(call.Params, common.TypeOf(x.Option.Pkg.TypesInfo.TypeOf(param)))
-					}
-					parentAssignStmt, ok := c.Parent().(*ast.AssignStmt)
-					if ok {
-						for _, param := range parentAssignStmt.Lhs {
-							call.Results = append(call.Results, common.TypeOf(x.Option.Pkg.TypesInfo.TypeOf(param)))
-						}
-					}
-					slog.Info("parse call", slog.String("name", line.UpFuncName()))
-					x.Metas.Call.NameGoTypeMap[line.UpFuncName()] = append(x.Metas.Call.NameGoTypeMap[line.UpFuncName()], call)
-				}
-
-			case *ast.FuncDecl:
-				if t.Doc.Text() == "" {
-					return true
-				}
-
-				doc, err := common.ParseDoc(t.Doc.Text())
-				if err != nil {
-					slog.Error("parse doc error", err, slog.String("doc", t.Doc.Text()))
-					panic(err)
-				}
-				for _, line := range doc {
-
-					var fn FuncGoTypeMeta
-					fn.Name = t.Name.Name
-					fn.Doc = doc
-					if t.Type.Params != nil {
-						for _, param := range t.Type.Params.List {
-							fn.Params = append(fn.Params, common.TypeOf(x.Option.Pkg.TypesInfo.TypeOf(param.Type)))
-						}
-					}
-
-					if t.Type.Results != nil {
-						for _, param := range t.Type.Results.List {
-							fn.Results = append(fn.Results, common.TypeOf(x.Option.Pkg.TypesInfo.TypeOf(param.Type)))
-						}
-					}
-
-					slog.Info("parse func", slog.String("name", line.UpFuncName()))
-					x.Metas.Func.NameGoTypeMap[line.UpFuncName()] = append(x.Metas.Func.NameGoTypeMap[line.UpFuncName()], fn)
-				}
-
-			case *ast.ImportSpec:
-				x.Option.Imports = append(x.Option.Imports, t)
-			case *ast.GenDecl:
-				if t.Doc.Text() == "" {
-					return true
-				}
-				doc, err := common.ParseDoc(t.Doc.Text())
-				if err != nil {
-					slog.Error("parse doc error", err, slog.String("doc", t.Doc.Text()))
-					panic(err)
-				}
-
-				for _, typeSpec := range t.Specs {
-					switch st := typeSpec.(type) {
-					case *ast.TypeSpec:
-						for _, line := range doc {
-							slog.Info("parse type", slog.String("name", line.UpFuncName()))
-							x.Metas.Type.NameGoTypeMap[line.UpFuncName()] = append(x.Metas.Type.NameGoTypeMap[line.UpFuncName()], TypeGoTypeMeta{
-								Doc: doc,
-								Obj: x.Option.Pkg.TypesInfo.TypeOf(st.Type),
-							})
-
-							slog.Info("parse typeSpec", slog.String("name", line.UpFuncName()))
-							x.Metas.TypeSpec.NameGoTypeMap[line.UpFuncName()] = append(x.Metas.TypeSpec.NameGoTypeMap[line.UpFuncName()], TypeSpecGoTypeMeta{
-								Doc: doc,
-								Obj: st,
-							})
-						}
-
-						switch st.Type.(type) {
-						case *ast.InterfaceType:
-							for _, line := range doc {
-								slog.Info("parse impl", slog.String("name", line.UpFuncName()))
-								x.Metas.Impl.NameGoTypeMap[line.UpFuncName()] = append(x.Metas.Impl.NameGoTypeMap[line.UpFuncName()], InterfaceGoTypeMeta{
-									Name:   st.Name.Name,
-									Doc:    doc,
-									RawDoc: t.Doc,
-									Obj:    x.Option.Pkg.TypesInfo.TypeOf(st.Type).(*types.Interface),
-								})
-							}
-						case *ast.StructType:
-							for _, line := range doc {
-								slog.Info("parse struct", slog.String("name", line.UpFuncName()))
-								x.Metas.Struct.NameGoTypeMap[line.UpFuncName()] = append(x.Metas.Struct.NameGoTypeMap[line.UpFuncName()], StructGoTypeMeta{
-									Name: st.Name.Name,
-									Doc:  doc,
-									Obj:  x.Option.Pkg.TypesInfo.TypeOf(st.Type).(*types.Struct),
-								})
-							}
-
-						}
+				parentAssignStmt, ok := c.Parent().(*ast.AssignStmt)
+				if ok {
+					for _, param := range parentAssignStmt.Lhs {
+						call.Results = append(call.Results, common.TypeOf(x.Option.Pkg.TypesInfo.TypeOf(param)))
 					}
 				}
-			default:
+				slog.Info("parse call", slog.String("name", line.UpFuncName()))
+				x.Metas.Call.NameGoTypeMap[line.UpFuncName()] = append(x.Metas.Call.NameGoTypeMap[line.UpFuncName()], call)
+			}
+
+		case *ast.FuncDecl:
+			if t.Doc.Text() == "" {
 				return true
 			}
+
+			doc, err := common.ParseDoc(t.Doc.Text())
+			if err != nil {
+				position := x.Option.Pkg.Fset.Position(t.Pos())
+				parseErr = common.ParseError("failed to parse function documentation").
+					WithCause(err).
+					WithLocation(position.Filename, position.Line, position.Column).
+					WithExtra("function_name", t.Name.Name).
+					WithDetails("unable to parse documentation comment for function declaration").
+					Build()
+				return false
+			}
+			for _, line := range doc {
+
+				var fn FuncGoTypeMeta
+				fn.Name = t.Name.Name
+				fn.Doc = doc
+				if t.Type.Params != nil {
+					for _, param := range t.Type.Params.List {
+						fn.Params = append(fn.Params, common.TypeOf(x.Option.Pkg.TypesInfo.TypeOf(param.Type)))
+					}
+				}
+
+				if t.Type.Results != nil {
+					for _, param := range t.Type.Results.List {
+						fn.Results = append(fn.Results, common.TypeOf(x.Option.Pkg.TypesInfo.TypeOf(param.Type)))
+					}
+				}
+
+				slog.Info("parse func", slog.String("name", line.UpFuncName()))
+				x.Metas.Func.NameGoTypeMap[line.UpFuncName()] = append(x.Metas.Func.NameGoTypeMap[line.UpFuncName()], fn)
+			}
+
+		case *ast.ImportSpec:
+			x.Option.Imports = append(x.Option.Imports, t)
+		case *ast.GenDecl:
+			if t.Doc.Text() == "" {
+				return true
+			}
+			doc, err := common.ParseDoc(t.Doc.Text())
+			if err != nil {
+				position := x.Option.Pkg.Fset.Position(t.Pos())
+				parseErr = common.ParseError("failed to parse general declaration documentation").
+					WithCause(err).
+					WithLocation(position.Filename, position.Line, position.Column).
+					WithDetails("unable to parse documentation comment for general declaration").
+					Build()
+				return false
+			}
+
+			for _, typeSpec := range t.Specs {
+				switch st := typeSpec.(type) {
+				case *ast.TypeSpec:
+					for _, line := range doc {
+						slog.Info("parse type", slog.String("name", line.UpFuncName()))
+						x.Metas.Type.NameGoTypeMap[line.UpFuncName()] = append(x.Metas.Type.NameGoTypeMap[line.UpFuncName()], TypeGoTypeMeta{
+							Doc: doc,
+							Obj: x.Option.Pkg.TypesInfo.TypeOf(st.Type),
+						})
+
+						slog.Info("parse typeSpec", slog.String("name", line.UpFuncName()))
+						x.Metas.TypeSpec.NameGoTypeMap[line.UpFuncName()] = append(x.Metas.TypeSpec.NameGoTypeMap[line.UpFuncName()], TypeSpecGoTypeMeta{
+							Doc: doc,
+							Obj: st,
+						})
+					}
+
+					switch st.Type.(type) {
+					case *ast.InterfaceType:
+						for _, line := range doc {
+							slog.Info("parse impl", slog.String("name", line.UpFuncName()))
+							x.Metas.Impl.NameGoTypeMap[line.UpFuncName()] = append(x.Metas.Impl.NameGoTypeMap[line.UpFuncName()], InterfaceGoTypeMeta{
+								Name:   st.Name.Name,
+								Doc:    doc,
+								RawDoc: t.Doc,
+								Obj:    x.Option.Pkg.TypesInfo.TypeOf(st.Type).(*types.Interface),
+							})
+						}
+					case *ast.StructType:
+						for _, line := range doc {
+							slog.Info("parse struct", slog.String("name", line.UpFuncName()))
+							x.Metas.Struct.NameGoTypeMap[line.UpFuncName()] = append(x.Metas.Struct.NameGoTypeMap[line.UpFuncName()], StructGoTypeMeta{
+								Name: st.Name.Name,
+								Doc:  doc,
+								Obj:  x.Option.Pkg.TypesInfo.TypeOf(st.Type).(*types.Struct),
+							})
+						}
+
+					}
+				}
+			}
+		default:
 			return true
-		}, func(c *astutil.Cursor) bool { return true })
-	}
+		}
+		return true
+	}, func(c *astutil.Cursor) bool { return true })
+
+	return parseErr
 }
 
 func (x *X) implByName(name string) ([]InterfaceGoTypeMeta, bool) {
@@ -420,12 +461,18 @@ func NewXByPkg(static embed.FS, p *packages.Package, tui *Model, config *Config,
 		TUI: tui,
 	}
 
-	x.Parse()
+	err := x.Parse()
+	if err != nil {
+		return nil, err
+	}
 	return x, nil
 }
 
 func NewX(static embed.FS, dir string, tui *Model) (res []*X, err error) {
-	config := findGenXConfig()
+	config, err := findGenXConfig()
+	if err != nil {
+		return nil, err
+	}
 
 	preloadMap := make(map[string][]*packages.Package, 0)
 
@@ -501,10 +548,13 @@ type Option struct {
 	PreloadPkg      map[string][]*packages.Package
 }
 
-func findGenXConfig() *Config {
+func findGenXConfig() (*Config, error) {
 	pwd, err := os.Getwd()
 	if err != nil {
-		panic(err)
+		return nil, common.ConfigError("failed to get current working directory").
+			WithCause(err).
+			WithDetails("unable to determine current working directory for config search").
+			Build()
 	}
 
 	currentDir := ""
@@ -513,7 +563,10 @@ func findGenXConfig() *Config {
 	for {
 		tmpFilePath = filepath.Join(pwd, "genx.yaml")
 		if currentDir == tmpFilePath {
-			panic("genx.yaml not found")
+			return nil, common.ConfigError("configuration file not found").
+				WithDetails("genx.yaml file not found in current directory or any parent directories").
+				WithExtra("search_path", pwd).
+				Build()
 		}
 		if _, err := os.Stat(tmpFilePath); os.IsNotExist(err) {
 			currentDir = tmpFilePath
@@ -527,10 +580,22 @@ func findGenXConfig() *Config {
 
 	err = k.Load(file.Provider(tmpFilePath), yaml.Parser())
 	if err != nil {
-		panic(err)
+		return nil, common.ConfigError("failed to load configuration file").
+			WithCause(err).
+			WithLocation(tmpFilePath, 0, 0).
+			WithDetails("unable to parse YAML configuration file").
+			Build()
 	}
 
 	config := &Config{}
-	k.Unmarshal("", config)
-	return config
+	err = k.Unmarshal("", config)
+	if err != nil {
+		return nil, common.ConfigError("failed to unmarshal configuration").
+			WithCause(err).
+			WithLocation(tmpFilePath, 0, 0).
+			WithDetails("configuration file structure is invalid").
+			Build()
+	}
+
+	return config, nil
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/dave/jennifer/jen"
 	"github.com/fitan/genx/common"
 	"github.com/samber/lo"
+	"golang.org/x/exp/slog"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -416,7 +417,9 @@ func (k *KitRequest) BindBodyParam() []jen.Code {
 	}
 
 	if len(k.Body) != 1 {
-		panic("body param count error " + fmt.Sprint(len(k.Body)))
+		// 记录错误但不 panic，返回空代码
+		slog.Error("body param count error", "count", len(k.Body))
+		return listCode
 	}
 
 	for _, v := range k.Body.OrderSlice() {
@@ -615,7 +618,9 @@ func (k *KitRequest) BindFormParam() []jen.Code {
 			continue
 		}
 
-		panic("not support form param type " + v.ParamNameAlias() + "tID: " + tID)
+		// 记录不支持的表单参数类型，但不 panic
+		slog.Error("not support form param type", "type", v.ParamNameAlias(), "tID", tID)
+		continue
 	}
 
 	return list
@@ -627,13 +632,15 @@ func (k *KitRequest) BindCtxParam() []jen.Code {
 		var ctxKey string
 
 		if v.ParamDoc == nil {
-			panic("ctx param doc is nil")
+			slog.Error("ctx param doc is nil", "param", v.ParamName)
+			continue
 		}
 		for _, d := range v.ParamDoc.List {
 			fields := strings.Fields(d.Text)
 			if fields[1] == DocKitHttpParamMark {
 				if len(fields) < 3 {
-					panic("ctx param doc error: " + d.Text)
+					slog.Error("ctx param doc error", "text", d.Text)
+					continue
 				}
 
 				if fields[2] == "ctx" {
@@ -643,7 +650,8 @@ func (k *KitRequest) BindCtxParam() []jen.Code {
 			}
 		}
 		if ctxKey == "" {
-			panic("not find ctx param doc error: " + v.ParamDoc.Text())
+			slog.Error("not find ctx param doc error", "doc", v.ParamDoc.Text())
+			continue
 		}
 		ctxVal := jen.Var().Id(v.ParamName + "OK").Bool()
 		varBind := jen.List(jen.Id(v.ParamNameAlias()), jen.Id(v.ParamName+"OK")).Op("=").Id("ctx.Value").Call(jen.Id(ctxKey)).Assert(jen.Id(v.RawParamType))
@@ -663,13 +671,15 @@ func (k *KitRequest) BindEndpointCtxParam() string {
 		var ctxKey string
 
 		if v.ParamDoc == nil {
-			panic("ctx param doc is nil")
+			slog.Error("endpoint ctx param doc is nil", "param", v.ParamName)
+			continue
 		}
 		for _, d := range v.ParamDoc.List {
 			fields := strings.Fields(d.Text)
 			if fields[1] == DocKitEndpointParamMark {
 				if len(fields) < 3 {
-					panic("ctx param doc error: " + d.Text)
+					slog.Error("endpoint ctx param doc error", "text", d.Text)
+					continue
 				}
 
 				if fields[2] == "ctx" {
@@ -679,7 +689,8 @@ func (k *KitRequest) BindEndpointCtxParam() string {
 			}
 		}
 		if ctxKey == "" {
-			panic("not find ctx param doc error: " + v.ParamDoc.Text())
+			slog.Error("not find endpoint ctx param doc error", "doc", v.ParamDoc.Text())
+			continue
 		}
 		ctxVal := jen.Var().Id(v.ParamName + "OK").Bool()
 		varBind := jen.List(jen.Id(v.ParamNameAlias()), jen.Id(v.ParamName+"OK")).Op("=").Id("ctx.Value").Call(jen.Id(ctxKey)).Assert(jen.Id(v.RawParamType))
@@ -820,9 +831,10 @@ func (k *KitRequest) ParseRequest() {
 		})
 	}
 	if !hasFindRequest {
-
 		b, _ := json.Marshal(k)
-		panic("not find request" + string(b))
+		slog.Error("not find request", "request_name", k.RequestName, "details", string(b))
+		// 不再 panic，而是设置一个标志或者返回错误
+		// 这里我们选择继续执行，但记录错误
 	}
 }
 

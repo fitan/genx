@@ -1,11 +1,12 @@
 package mapstruct
 
 import (
+	"fmt"
 	"path/filepath"
 
+	"github.com/fitan/genx/common"
 	"github.com/fitan/genx/gen"
 	"github.com/fitan/jennifer/jen"
-	"github.com/pkg/errors"
 )
 
 type Plug struct {
@@ -25,14 +26,24 @@ func (s Plug) Gen(option gen.Option, callGoTypeMetes []gen.CallGoTypeMeta) (res 
 			current[v.Name] = struct{}{}
 		}
 		if len(v.Params) != 2 {
-			return nil, errors.New("copy: params must be two")
+			return nil, common.ValidationError("invalid copy function parameters").
+				WithPlugin("@copy").
+				WithExtra("function_name", v.Name).
+				WithExtra("param_count", fmt.Sprintf("%d", len(v.Params))).
+				WithDetails("copy function must have exactly 2 parameters (source and destination)").
+				Build()
 		}
 
 		destType := v.Params[0]
 		srcType := v.Params[1]
 
 		if !destType.Pointer {
-			return nil, errors.New("copy: params must pointer")
+			return nil, common.ValidationError("invalid copy destination parameter").
+				WithPlugin("@copy").
+				WithExtra("function_name", v.Name).
+				WithExtra("parameter_type", "destination").
+				WithDetails("copy destination parameter must be a pointer type").
+				Build()
 		}
 
 		pkg := option.Pkg

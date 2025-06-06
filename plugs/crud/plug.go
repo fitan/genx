@@ -1,9 +1,9 @@
 package crud
 
 import (
-	"fmt"
 	"path/filepath"
 
+	"github.com/fitan/genx/common"
 	"github.com/fitan/genx/gen"
 	"github.com/fitan/jennifer/jen"
 )
@@ -109,8 +109,13 @@ func (s Plug) Gen(option gen.Option, structGoTypeMetas []gen.StructGoTypeMeta) (
 
 		typeName, has := v.Doc.ByFuncNameAndArgName("@crud", "type")
 		if !has {
-			err = fmt.Errorf("@crud type must be set")
-			return
+			return nil, common.ValidationError("missing required annotation parameter").
+				WithPlugin("@crud").
+				WithStruct(v.Name).
+				WithAnnotation("@crud").
+				WithExtra("parameter", "type").
+				WithDetails("@crud annotation requires 'type' parameter. Format: @crud type=http|gorm").
+				Build()
 		}
 
 		switch typeName {
@@ -119,8 +124,13 @@ func (s Plug) Gen(option gen.Option, structGoTypeMetas []gen.StructGoTypeMeta) (
 		case "gorm":
 			return s.gorm(option, structGoTypeMetas)
 		default:
-			err = fmt.Errorf("@crud type %s not support", typeName)
-			return
+			return nil, common.ValidationError("unsupported crud type").
+				WithPlugin("@crud").
+				WithStruct(v.Name).
+				WithAnnotation("@crud").
+				WithExtra("type", typeName).
+				WithDetails("@crud type must be 'http' or 'gorm'. Format: @crud type=http|gorm").
+				Build()
 		}
 	}
 

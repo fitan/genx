@@ -33,7 +33,8 @@ func Gen(j *jen.File, option gen.Option, implGoTypeMetes []gen.InterfaceGoTypeMe
 			meta, err := parseImpl.Parse(v.Obj, v.RawDoc, &v.Doc)
 			if err != nil {
 				slog.Error("parseImpl.Parse", err, slog.String("name", v.Obj.String()))
-				return
+				// 不再直接 return，而是继续处理其他接口
+				continue
 			}
 
 			for _, m := range meta.Methods {

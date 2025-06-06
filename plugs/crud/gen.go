@@ -1,7 +1,6 @@
 package crud
 
 import (
-	"fmt"
 	"go/types"
 	"reflect"
 	"strings"
@@ -38,9 +37,35 @@ func (s *GormCrud) genImpl(i gen.StructGoTypeMeta) (err error) {
 	modelId, modelHas := i.Doc.ByFuncNameAndArgName("@crud", "model")
 	idName, idHas := i.Doc.ByFuncNameAndArgName("@crud", "idName")
 	idType, idTypeHas := i.Doc.ByFuncNameAndArgName("@crud", "idType")
-	if !idHas || !modelHas || !idTypeHas {
-		err = fmt.Errorf("@crud model,id,idType must be set")
-		return
+
+	if !modelHas {
+		return common.ValidationError("missing required annotation parameter").
+			WithPlugin("@crud").
+			WithStruct(i.Name).
+			WithAnnotation("@crud").
+			WithExtra("parameter", "model").
+			WithDetails("@crud annotation requires 'model' parameter. Format: @crud model=package.ModelName idName=fieldName idType=fieldType").
+			Build()
+	}
+
+	if !idHas {
+		return common.ValidationError("missing required annotation parameter").
+			WithPlugin("@crud").
+			WithStruct(i.Name).
+			WithAnnotation("@crud").
+			WithExtra("parameter", "idName").
+			WithDetails("@crud annotation requires 'idName' parameter. Format: @crud model=package.ModelName idName=fieldName idType=fieldType").
+			Build()
+	}
+
+	if !idTypeHas {
+		return common.ValidationError("missing required annotation parameter").
+			WithPlugin("@crud").
+			WithStruct(i.Name).
+			WithAnnotation("@crud").
+			WithExtra("parameter", "idType").
+			WithDetails("@crud annotation requires 'idType' parameter. Format: @crud model=package.ModelName idName=fieldName idType=fieldType").
+			Build()
 	}
 
 	modelName := strings.ReplaceAll(modelId, ".", "")
@@ -248,9 +273,34 @@ func (s *HttpCrud) genImpl(i gen.StructGoTypeMeta) (err error) {
 	idName, idHas := i.Doc.ByFuncNameAndArgName("@crud", "idName")
 	idType, idTypeHas := i.Doc.ByFuncNameAndArgName("@crud", "idType")
 	preload, _ := i.Doc.ByFuncNameAndArgName("@crud", "preload")
-	if !idHas || !modelHas || !idTypeHas {
-		err = fmt.Errorf("@crud model,id,idType must be set")
-		return
+	if !modelHas {
+		return common.ValidationError("missing required annotation parameter").
+			WithPlugin("@crud").
+			WithStruct(i.Name).
+			WithAnnotation("@crud").
+			WithExtra("parameter", "model").
+			WithDetails("@crud annotation requires 'model' parameter. Format: @crud model=package.ModelName idName=fieldName idType=fieldType").
+			Build()
+	}
+
+	if !idHas {
+		return common.ValidationError("missing required annotation parameter").
+			WithPlugin("@crud").
+			WithStruct(i.Name).
+			WithAnnotation("@crud").
+			WithExtra("parameter", "idName").
+			WithDetails("@crud annotation requires 'idName' parameter. Format: @crud model=package.ModelName idName=fieldName idType=fieldType").
+			Build()
+	}
+
+	if !idTypeHas {
+		return common.ValidationError("missing required annotation parameter").
+			WithPlugin("@crud").
+			WithStruct(i.Name).
+			WithAnnotation("@crud").
+			WithExtra("parameter", "idType").
+			WithDetails("@crud annotation requires 'idType' parameter. Format: @crud model=package.ModelName idName=fieldName idType=fieldType").
+			Build()
 	}
 
 	modelName := strings.ReplaceAll(modelId, ".", "")

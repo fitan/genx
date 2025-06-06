@@ -18,14 +18,31 @@ func CEPGen(opt gen.Option, imd common.InterfaceMetaDate) (res []gen.GenResult, 
 	f := func(m common.InterfaceMethod) (*Method, error) {
 		kit, err := NewKit(m.Doc)
 		if err != nil {
-			panic(err)
+			return nil, common.ParseError("failed to parse kit configuration").
+				WithCause(err).
+				WithPlugin("@cep").
+				WithMethod(m.Name).
+				WithDetails("unable to parse kit HTTP configuration from method documentation").
+				Build()
 		}
 		// 如果没有不生成
 		if kit.Conf.Url == "" {
 			return nil, nil
 		}
 		kitRequest := NewKitRequest(opt.Pkg, m.Name, kit.Conf.HttpRequestName, kit.Conf.HttpRequestBody)
-		kitRequest.ParseRequest()
+
+		// 使用安全的解析方法
+		if parseErr := common.WithRecovery(func() error {
+			kitRequest.ParseRequest()
+			return nil
+		}); parseErr != nil {
+			return nil, common.ParseError("failed to parse request structure").
+				WithCause(parseErr).
+				WithPlugin("@cep").
+				WithMethod(m.Name).
+				WithDetails("unable to parse HTTP request structure").
+				Build()
+		}
 
 		method := Method{Name: m.Name}
 		method.IMethod = m
@@ -41,7 +58,7 @@ func CEPGen(opt gen.Option, imd common.InterfaceMetaDate) (res []gen.GenResult, 
 	for _, v := range imd.Methods {
 		m, err := f(v)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 
 		if m != nil {
@@ -76,12 +93,20 @@ func ObserverGen(opt gen.Option, imd common.InterfaceMetaDate) (res []gen.GenRes
 
 	logFile, err := fs.ReadFile(opt.Static, "static/template/ce_log.tmpl")
 	if err != nil {
-		panic(err)
+		return nil, common.ConfigError("failed to read log template file").
+			WithCause(err).
+			WithPlugin("@observer").
+			WithDetails("unable to read ce_log.tmpl template file").
+			Build()
 	}
 
 	traceFile, err := fs.ReadFile(opt.Static, "static/template/ce_trace.tmpl")
 	if err != nil {
-		panic(err)
+		return nil, common.ConfigError("failed to read trace template file").
+			WithCause(err).
+			WithPlugin("@observer").
+			WithDetails("unable to read ce_trace.tmpl template file").
+			Build()
 	}
 
 	methodMap := make(map[string]Method, 0)

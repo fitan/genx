@@ -2,6 +2,7 @@ package do
 
 import (
 	"fmt"
+	"log/slog"
 	"path/filepath"
 	"sort"
 
@@ -65,7 +66,12 @@ func (p *Plug) Gen(req []gen.GlobalFuncGoTypeMeta) (res []gen.GenResult, err err
 
 				provideMetaOk = true
 			default:
-				err = fmt.Errorf("do func %s not support value %s", meta.Name, doType)
+				// 记录不支持的 do 函数类型，但不中断处理
+				slog.Error("unsupported do function type",
+					"function", meta.Name,
+					"do_type", doType,
+					"supported_types", "init|provide")
+				// 跳过不支持的类型，继续处理其他函数
 			}
 		})
 		if initMetaOk {

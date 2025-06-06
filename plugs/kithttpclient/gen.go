@@ -69,8 +69,8 @@ func (m *MethodMeta) structFieldMetaData2RequestParamMap(fields []common.StructF
 		indexes := append(index, i)
 		current := fields
 		lo.ForEach(indexes, func(item int, index int) {
-			pathList = append(pathList, current[i].Name)
-			current = *current[i].NextFields
+			pathList = append(pathList, current[item].Name)
+			current = *current[item].NextFields
 		})
 
 		paramPathStr := strings.Join(pathList, ".")
@@ -164,20 +164,23 @@ type RequestParam struct {
 	StructFieldMetaDataIndex []int
 }
 
-func (k *KitHttpClient) Parse() {
-
+func (k *KitHttpClient) Parse() error {
 	parseImpl := common.NewInterfaceSerialize(k.option.Pkg)
 
 	for _, v := range k.implGoTypeMetes {
 		interfaceMetaDate, err := parseImpl.Parse(v.Obj, v.RawDoc, &v.Doc)
 		if err != nil {
-			panic(err)
+			return common.ParseError("failed to parse interface").
+				WithCause(err).
+				WithPlugin("@kit-http-client").
+				WithInterface(v.Obj.String()).
+				WithDetails("unable to parse interface metadata").
+				Build()
 		}
 
 		var basePath string
 		interfaceMetaDate.Doc.ByFuncNameAndArgs("@basePath", &basePath)
-		slog.Info("doc: ", "idc", interfaceMetaDate.Doc)
-		slog.Info("basepa", "basepath", basePath)
+		slog.Info("parsing interface", "interface", v.Obj.String(), "basePath", basePath)
 
 		for _, method := range interfaceMetaDate.Methods {
 			var httpUrl, httpMethod string
@@ -186,18 +189,33 @@ func (k *KitHttpClient) Parse() {
 
 			has := method.Doc.ByFuncNameAndArgs("@kit-http", &httpUrl, &httpMethod)
 			if !has {
-				err = fmt.Errorf("%s not found @kit-http annotation", method.Name)
-				panic(err)
+				return common.ValidationError("missing required annotation").
+					WithPlugin("@kit-http-client").
+					WithInterface(v.Obj.String()).
+					WithMethod(method.Name).
+					WithAnnotation("@kit-http").
+					WithDetails("@kit-http annotation is required for HTTP client generation. Format: @kit-http <url> <method>").
+					Build()
 			}
+
 			has = method.Doc.ByFuncNameAndArgs("@kit-http-request", &requestTypeName, &requestBody)
 			if !has {
-				err = fmt.Errorf("%s not found @kit-http-request annotation", method.Name)
-				panic(err)
+				return common.ValidationError("missing required annotation").
+					WithPlugin("@kit-http-client").
+					WithInterface(v.Obj.String()).
+					WithMethod(method.Name).
+					WithAnnotation("@kit-http-request").
+					WithDetails("@kit-http-request annotation is required. Format: @kit-http-request <RequestType> [body_flag]").
+					Build()
 			}
 
 			if len(method.Results) != 2 {
-				err = fmt.Errorf("%s results len not eq 2", method.Name)
-				panic(err)
+				return common.ValidationError("invalid method signature").
+					WithPlugin("@kit-http-client").
+					WithInterface(v.Obj.String()).
+					WithMethod(method.Name).
+					WithDetails(fmt.Sprintf("method must return exactly 2 values (response, error), got %d", len(method.Results))).
+					Build()
 			}
 
 			v2 := common.NewStructSerializeV2(k.option.Pkg, method.Params[1].Type)
@@ -210,7 +228,7 @@ func (k *KitHttpClient) Parse() {
 				HttpMethod:          httpMethod,
 				RequestTypeName:     requestTypeName,
 				ResponseTypeName:    method.Results[0].ID,
-				RequestBody:         lo.IsNotEmpty(requestBody),
+				RequestBody:         requestBody != "" && requestBody != "false",
 				HasResponseErr:      method.ReturnsError,
 				PathParams:          map[string]RequestParam{},
 				BodyParams:          map[string]RequestParam{},
@@ -219,13 +237,25 @@ func (k *KitHttpClient) Parse() {
 				StructFieldMetaData: *v2.Fields,
 			}
 
-			mm.Parse()
+			// 使用 recovery 机制来捕获 Parse 方法中可能的 panic
+			if err := common.WithRecovery(func() error {
+				mm.Parse()
+				return nil
+			}); err != nil {
+				return common.ParseError("failed to parse method metadata").
+					WithCause(err).
+					WithPlugin("@kit-http-client").
+					WithInterface(v.Obj.String()).
+					WithMethod(method.Name).
+					WithDetails("error occurred while parsing method metadata").
+					Build()
+			}
 
 			k.methods = append(k.methods, mm)
 		}
-
 	}
 
+	return nil
 }
 
 func (k KitHttpClient) Gen(j *jen.File) {
@@ -295,6 +325,12 @@ func (s HttpClientService) mergeOpt(option *Option) Option {
 	}
 	return *option
 }
+
+func NewHttpClientService(opt Option) *HttpClientService {
+	return &HttpClientService{
+		Option: opt,
+	}
+}
 	`)
 
 	j.Type().Id("HttpClientImpl").InterfaceFunc(func(g *jen.Group) {
@@ -359,7 +395,7 @@ func (s HttpClientService) mergeOpt(option *Option) Option {
 					fmtSprintParam...,
 				)),
 				jen.If(jen.Err().Op("!=").Nil()).Block(
-					jen.Err().Op("=").Qual("fmt", "Errorf").Call(jen.Lit("parse prePath %s bathPath %s error: %v"), jen.Id("s.PrePath"), jen.Lit(v.BasePath), jen.Err()),
+					jen.Err().Op("=").Qual("fmt", "Errorf").Call(jen.Lit("parse prePath %s basePath %s error: %v"), jen.Id("s.PrePath"), jen.Lit(v.BasePath), jen.Err()),
 					jen.Return(),
 				),
 			)
@@ -368,7 +404,7 @@ func (s HttpClientService) mergeOpt(option *Option) Option {
 				urlCode,
 				jen.List(jen.Id("urlStr"), jen.Err()).Op(":=").Qual("net/url", "JoinPath").Call(jen.Id("s.PrePath"), jen.Lit(v.BasePath), jen.Lit(re.ReplaceAllString(v.HttpUrl, "%s"))),
 				jen.If(jen.Err().Op("!=").Nil()).Block(
-					jen.Err().Op("=").Qual("fmt", "Errorf").Call(jen.Lit("parse prePath %s bathPath %s error: %v"), jen.Id("s.PrePath"), jen.Lit(v.BasePath), jen.Err()),
+					jen.Err().Op("=").Qual("fmt", "Errorf").Call(jen.Lit("parse prePath %s basePath %s error: %v"), jen.Id("s.PrePath"), jen.Lit(v.BasePath), jen.Err()),
 					jen.Return(),
 				),
 			)
@@ -377,9 +413,9 @@ func (s HttpClientService) mergeOpt(option *Option) Option {
 		urlCode = append(urlCode,
 			jen.List(jen.Id("u"), jen.Err()).Op(":=").Qual("net/url", "Parse").CallFunc(func(group *jen.Group) {
 				if len(queryCode) != 0 {
-					group.Id(`fmt.Sprintf("http://%s/%s?%s", instance,url.PathEscape(strings.TrimRight(urlStr, "/")), q.Encode())`)
+					group.Qual("fmt", "Sprintf").Call(jen.Lit("http://%s%s?%s"), jen.Id("instance"), jen.Qual("net/url", "PathEscape").Call(jen.Qual("strings", "TrimRight").Call(jen.Id("urlStr"), jen.Lit("/"))), jen.Id("q.Encode").Call())
 				} else {
-					group.Id(`fmt.Sprintf("http://%s/%s", instance,strings.TrimRight(urlStr, "/"))`)
+					group.Qual("fmt", "Sprintf").Call(jen.Lit("http://%s%s"), jen.Id("instance"), jen.Qual("strings", "TrimRight").Call(jen.Id("urlStr"), jen.Lit("/")))
 				}
 			}),
 		)
@@ -394,7 +430,7 @@ func (s HttpClientService) mergeOpt(option *Option) Option {
 		var setHeaderCode []jen.Code
 		for k, v := range v.HeaderParams {
 			setHeaderCode = append(setHeaderCode,
-				jen.Id("req.Header.Set").Call(jen.Lit(k), jen.Id("req."+v.ParamPath)),
+				jen.Id("r.Header.Set").Call(jen.Lit(k), jen.Id("req."+v.ParamPath)),
 			)
 		}
 

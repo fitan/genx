@@ -55,7 +55,7 @@ func KitComment(doc common.Doc) (kitConf KitCommentConf, err error) {
 	var isRequestBody string
 
 	doc.ByFuncNameAndArgs(KitHttpRequest, &kitConf.HttpRequestName, &isRequestBody)
-	kitConf.HttpRequestBody = lo.Ternary(isRequestBody != "" || isRequestBody == "false", true, false)
+	kitConf.HttpRequestBody = lo.Ternary(isRequestBody != "" && isRequestBody != "false", true, false)
 
 	return
 }
