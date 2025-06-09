@@ -185,7 +185,8 @@ func (p *FxStructPlug) generateFxOutStruct(f *jen.File, meta gen.StructGoTypeMet
 }
 
 func (p *Plug) Gen(req []gen.GlobalFuncGoTypeMeta) (res []gen.GenResult, err error) {
-	slog.Info("fx plugin starting", "total_packages", len(req))
+	// 强制输出调试信息
+	fmt.Printf("FX PLUGIN: Starting with %d packages\n", len(req))
 
 	appMetas := []gen.GlobalFuncGoTypeMeta{}
 	provideMetas := []provideMeta{}
@@ -194,6 +195,7 @@ func (p *Plug) Gen(req []gen.GlobalFuncGoTypeMeta) (res []gen.GenResult, err err
 
 	// 扫描所有函数，按类型分类
 	lo.ForEach(req, func(item gen.GlobalFuncGoTypeMeta, index int) {
+		fmt.Println("processing package", item.Option.Pkg.PkgPath)
 		slog.Info("processing package", "package", item.Option.Pkg.PkgPath, "functions", len(item.Metas))
 		appMeta := gen.GlobalFuncGoTypeMeta{
 			Option: item.Option,
@@ -216,6 +218,7 @@ func (p *Plug) Gen(req []gen.GlobalFuncGoTypeMeta) (res []gen.GenResult, err err
 
 		lo.ForEach(item.Metas, func(meta gen.FuncGoTypeMeta, index int) {
 			// 检查是否有 @fx 注解
+			fmt.Println(meta.Doc)
 			fxDoc := meta.Doc.ByFuncName(p.Name())
 			if fxDoc == nil {
 				return // 没有 @fx 注解，跳过

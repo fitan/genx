@@ -68,7 +68,6 @@ func main() {
 						item.RegTypeSpec(&enum.Plug{})
 						item.RegStruct(&gormq.Plug{})
 						item.RegStruct(&crud.Plug{})
-						item.RegStruct(fx.NewFxStructPlug())
 						item.RegImpl(&kithttpclient.Plug{})
 						item.RegImpl(&temporal.Plug{})
 						item.RegCall(&plugCopy.Plug{})

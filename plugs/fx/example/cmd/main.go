@@ -8,7 +8,7 @@ import (
 	"go.uber.org/fx/fxevent"
 )
 
-// @fx(type="app")
+// @fx app
 //
 //go:generate genx
 func main() {
